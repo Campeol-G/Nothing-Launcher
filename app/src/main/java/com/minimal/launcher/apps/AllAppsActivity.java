@@ -149,7 +149,13 @@ public final class AllAppsActivity extends AppCompatActivity
         if (adapter.getItemCount() != 1) {
             return;
         }
-        adapter.getItems().get(0).launch(this);
+        AppEntry match = adapter.getItems().get(0);
+        if (mode == MODE_PICK) {
+            // Quem chamou está escolhendo um favorito: devolver, não abrir.
+            setResult(RESULT_OK, new Intent().putExtra(EXTRA_RESULT_COMPONENT, match.component));
+        } else {
+            match.launch(this);
+        }
         finish();
     }
 
