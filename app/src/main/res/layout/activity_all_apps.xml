@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Root é EdgeGestureLayout com direção "para baixo": fecha a lista. -->
+<com.minimal.launcher.EdgeGestureLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:id="@+id/all_apps_column"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <EditText
+            android:id="@+id/search"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@null"
+            android:fontFamily="sans-serif-light"
+            android:hint="@string/search_hint"
+            android:imeOptions="actionGo|flagNoExtractUi"
+            android:importantForAutofill="no"
+            android:inputType="text|textNoSuggestions"
+            android:maxLines="1"
+            android:paddingBottom="@dimen/header_bottom_padding"
+            android:singleLine="true"
+            android:textColor="@color/fg_dark"
+            android:textColorHint="@color/fg_dark"
+            android:textCursorDrawable="@null"
+            android:textSize="@dimen/search_size" />
+
+        <TextView
+            android:id="@+id/empty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-light"
+            android:paddingBottom="@dimen/app_row_padding"
+            android:text="@string/all_apps_empty"
+            android:textColor="@color/fg_dark"
+            android:textSize="@dimen/app_name_size"
+            android:visibility="gone" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/all_apps_list"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:contentDescription="@string/all_apps_list_description"
+            android:overScrollMode="never"
+            android:scrollbars="none" />
+    </LinearLayout>
+
+</com.minimal.launcher.EdgeGestureLayout>

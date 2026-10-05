@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Escala tipográfica. Multiplicada pela preferência de tamanho de fonte. -->
+    <dimen name="clock_size">46sp</dimen>
+    <dimen name="date_size">13sp</dimen>
+    <dimen name="app_name_size">19sp</dimen>
+    <dimen name="search_size">19sp</dimen>
+    <dimen name="settings_title_size">26sp</dimen>
+    <dimen name="settings_row_size">16sp</dimen>
+    <dimen name="settings_summary_size">12sp</dimen>
+    <dimen name="small_size">11sp</dimen>
+
+    <dimen name="screen_side_padding">26dp</dimen>
+    <dimen name="header_top_padding">18dp</dimen>
+    <dimen name="header_bottom_padding">18dp</dimen>
+    <dimen name="clock_date_gap">2dp</dimen>
+    <dimen name="notification_dot_size">6dp</dimen>
+    <dimen name="notification_dot_margin">12dp</dimen>
+    <dimen name="app_row_padding">7dp</dimen>
+    <dimen name="list_bottom_padding">20dp</dimen>
+    <dimen name="settings_row_padding_v">14dp</dimen>
+    <dimen name="settings_section_padding">26dp</dimen>
+</resources>

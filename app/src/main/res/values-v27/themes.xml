@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.MinimalLauncher.V27" parent="Theme.MinimalLauncher.Base">
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+    </style>
+
+    <style name="Theme.MinimalLauncher" parent="Theme.MinimalLauncher.V27" />
+</resources>

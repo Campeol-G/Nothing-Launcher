@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.minimal.launcher.EdgeGestureLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:id="@+id/settings_column"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/settings_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-light"
+            android:includeFontPadding="false"
+            android:paddingBottom="@dimen/settings_section_padding"
+            android:text="@string/settings_title"
+            android:textColor="@color/fg_dark"
+            android:textSize="@dimen/settings_title_size" />
+
+        <ScrollView
+            android:id="@+id/settings_scroll"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:overScrollMode="never"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/settings_rows"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </ScrollView>
+    </LinearLayout>
+
+</com.minimal.launcher.EdgeGestureLayout>
