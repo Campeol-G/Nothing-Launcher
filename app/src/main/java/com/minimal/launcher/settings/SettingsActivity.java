@@ -177,7 +177,7 @@ public final class SettingsActivity extends AppCompatActivity {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(0, ThemeHelper.dp(this, 14), 0, 0);
+        // Sem padding aqui: RowTitle e RowSummary ja trazem o respiro vertical.
         row.setBackground(ripple());
         row.setClickable(true);
         row.setFocusable(true);

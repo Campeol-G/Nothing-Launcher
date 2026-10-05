@@ -18,7 +18,6 @@ import com.minimal.launcher.R;
 
 import java.text.Normalizer;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -40,7 +39,6 @@ public final class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.Vi
     public static final int MODE_PICK = 1;
     public static final int MODE_MANAGE = 2;
 
-    private final Context context;
     private final List<AppEntry> items = new ArrayList<>();
     private final List<AppEntry> source;
     private final Set<String> marked = new HashSet<>();
@@ -55,7 +53,6 @@ public final class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.Vi
                           @NonNull List<AppEntry> source,
                           int mode,
                           @Nullable AppListCallback callback) {
-        this.context = context;
         this.source = source;
         this.mode = mode;
         this.callback = callback;
@@ -106,8 +103,14 @@ public final class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.Vi
         setItems(matches);
     }
 
-    /** Marca um item como "sera removido" (usado pelo modo MANAGE). */
+    /**
+     * Marca um item como "sera removido". Só faz sentido no modo MANAGE - nos
+     * outros modos o toque já tem um destino definido e nada seria riscado.
+     */
     public void setMarked(@NonNull String component, boolean isMarked) {
+        if (mode != MODE_MANAGE) {
+            return;
+        }
         boolean changed = isMarked ? marked.add(component) : marked.remove(component);
         if (changed) {
             for (int index = 0; index < items.size(); index++) {
@@ -120,7 +123,7 @@ public final class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.Vi
     }
 
     public boolean isMarked(@NonNull String component) {
-        return marked.contains(component);
+        return mode == MODE_MANAGE && marked.contains(component);
     }
 
     @NonNull
@@ -166,33 +169,20 @@ public final class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.Vi
         text.setTextSize(TypedValue.COMPLEX_UNIT_PX, baseTextSizePx * fontScale);
         text.setGravity(textGravity);
 
-        boolean isMarked = marked.contains(entry.component);
+        boolean isMarked = mode == MODE_MANAGE && marked.contains(entry.component);
         text.setPaintFlags(isMarked
                 ? text.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG
                 : text.getPaintFlags() & ~Paint.STRIKE_THRU_TEXT_FLAG);
         text.setAlpha(isMarked ? 0.4f : 1f);
 
-        switch (mode) {
-            case MODE_MANAGE:
-                // Toque longo precisa iniciar arrasto; quem decide e a activity.
-                text.setOnClickListener(v -> {
-                    if (callback != null) {
-                        callback.onAppClick(entry);
-                    }
-                });
-                text.setOnLongClickListener(v -> callback != null && callback.onAppLongClick(v, entry));
-                break;
-            case MODE_PICK:
-            case MODE_LAUNCH:
-            default:
-                text.setOnClickListener(v -> {
-                    if (callback != null) {
-                        callback.onAppClick(entry);
-                    }
-                });
-                text.setOnLongClickListener(v -> callback != null && callback.onAppLongClick(v, entry));
-                break;
-        }
+        // Os tres modos usam os mesmos dois callbacks; quem muda e o que a
+        // activity faz com eles (abrir o app, devolver o app, marcar ou arrastar).
+        text.setOnClickListener(v -> {
+            if (callback != null) {
+                callback.onAppClick(entry);
+            }
+        });
+        text.setOnLongClickListener(v -> callback != null && callback.onAppLongClick(v, entry));
     }
 
     @Override
@@ -203,12 +193,6 @@ public final class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.Vi
     @Override
     public long getItemId(int position) {
         return items.get(position).component.hashCode();
-    }
-
-    /** Itens nao marcados, ja filtrados, na ordem atual. */
-    @NonNull
-    public List<AppEntry> snapshotUnmarked() {
-        return Collections.unmodifiableList(getUnmarkedItems());
     }
 
     static final class ViewHolder extends RecyclerView.ViewHolder {
