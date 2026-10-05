@@ -9,7 +9,6 @@
     <!-- Todos os apps -->
     <string name="search_hint">Buscar</string>
     <string name="all_apps_empty">Nenhum app encontrado</string>
-    <string name="open_all_apps">Ver todos os apps</string>
 
     <!-- Configurações -->
     <string name="settings_title">Configurações</string>
@@ -47,9 +46,9 @@
     <!-- Acesso a notificações -->
     <string name="notification_access_title">Acesso a notificações</string>
     <string name="notification_access_summary">Conceda acesso para que o indicador possa funcionar.</string>
-    <string name="notification_access_granted">Concedido</string>
 
     <!-- Serviço de acessibilidade -->
+    <string name="accessibility_service_title">Serviço de acessibilidade</string>
     <string name="accessibility_service_label">Minimal Launcher — bloqueio por toque duplo</string>
     <string name="accessibility_service_description">Usado apenas para travar a tela quando você faz dois toques na tela inicial. Não coleta nem compartilha nada.</string>
     <string name="accessibility_service_summary_title">Ativar serviço de acessibilidade</string>
@@ -62,7 +61,6 @@
     <string name="menu_remove_favorite">Remover dos favoritos</string>
     <string name="menu_app_info">Informações do app</string>
     <string name="menu_uninstall">Desinstalar</string>
-    <string name="menu_unavailable">Nenhuma ação disponível para este app</string>
 
     <!-- Gerenciar favoritos -->
     <string name="manage_favorites_title">Favoritos</string>
@@ -73,5 +71,4 @@
 
     <!-- Ações -->
     <string name="action_cancel">Cancelar</string>
-    <string name="action_ok">Ok</string>
 </resources>

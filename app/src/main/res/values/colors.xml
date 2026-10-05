@@ -2,7 +2,4 @@
 <resources>
     <color name="ic_launcher_background">#FF000000</color>
     <color name="fg_dark">#FFFFFFFF</color>
-    <color name="fg_light">#FF000000</color>
-    <color name="divider_dark">#33FFFFFF</color>
-    <color name="divider_light">#22000000</color>
 </resources>

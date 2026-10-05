@@ -38,7 +38,7 @@ public final class AppMenu {
                             @Nullable final Listener listener) {
         final FavoritesStore favorites = new FavoritesStore(context);
         final boolean isFavorite = favorites.isFavorite(entry.component);
-        final boolean canUninstall = new AppRepository(context).canUninstall(entry.packageName);
+        final boolean canUninstall = AppRepository.get(context).canUninstall(entry.packageName);
 
         List<String> labels = new ArrayList<>(3);
         final List<Integer> actions = new ArrayList<>(3);

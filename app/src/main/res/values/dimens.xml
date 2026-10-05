@@ -8,16 +8,12 @@
     <dimen name="settings_title_size">26sp</dimen>
     <dimen name="settings_row_size">16sp</dimen>
     <dimen name="settings_summary_size">12sp</dimen>
-    <dimen name="small_size">11sp</dimen>
 
-    <dimen name="screen_side_padding">26dp</dimen>
-    <dimen name="header_top_padding">18dp</dimen>
     <dimen name="header_bottom_padding">18dp</dimen>
     <dimen name="clock_date_gap">2dp</dimen>
     <dimen name="notification_dot_size">6dp</dimen>
     <dimen name="notification_dot_margin">12dp</dimen>
     <dimen name="app_row_padding">7dp</dimen>
-    <dimen name="list_bottom_padding">20dp</dimen>
     <dimen name="settings_row_padding_v">14dp</dimen>
     <dimen name="settings_section_padding">26dp</dimen>
 </resources>

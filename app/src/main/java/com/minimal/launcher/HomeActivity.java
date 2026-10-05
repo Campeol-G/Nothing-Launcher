@@ -49,6 +49,7 @@ public final class HomeActivity extends AppCompatActivity
     private FavoritesStore favoritesStore;
     private AppListAdapter favoritesAdapter;
     private SystemTimeWatcher timeWatcher;
+    private String appliedPrefs = "";
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -97,6 +98,8 @@ public final class HomeActivity extends AppCompatActivity
             }
         });
 
+        applyListPlacement();
+        appliedPrefs = prefsSignature();
         updateClock();
     }
 
@@ -112,12 +115,25 @@ public final class HomeActivity extends AppCompatActivity
     @Override
     protected void onResume() {
         super.onResume();
-        // As preferências podem ter mudado nas Configurações.
+
+        // Alinhamento, fonte e posição são lidos pelo adapter e pelo layout, não
+        // observados. Em vez de um mecanismo de "atualize-se", recriamos: é uma
+        // tela só e a animação de transition está desligada por estilo.
+        String current = prefsSignature();
+        if (!current.equals(appliedPrefs)) {
+            appliedPrefs = current;
+            recreate();
+            return;
+        }
+
         ThemeHelper.applySystemBars(this);
-        applyFontScale();
-        applyListPlacement();
         updateClock();
         updateNotificationDot(NotificationState.getCount());
+    }
+
+    /** Só as preferências que a tela principal lê na construção. */
+    private String prefsSignature() {
+        return prefs.getAlignment() + '|' + prefs.getVerticalPosition() + '|' + prefs.getFontScale();
     }
 
     @Override

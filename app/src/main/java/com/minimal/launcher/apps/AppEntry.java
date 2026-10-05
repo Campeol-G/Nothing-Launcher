@@ -62,29 +62,42 @@ public final class AppEntry {
     }
 
     /**
-     * Abre o app. Sem ícone, sem animação, sem task própria reaproveitada:
-     * sempre uma task nova.
+     * Abre o app. Sem ícone, sem animação, sempre em task nova.
+     *
+     * <p>Preferimos a activity exata que o usuário favoritou; se ela não existir
+     * mais, caímos no app inteiro em vez de não fazer nada.
      */
     public void launch(@NonNull Context context) {
         PackageManager pm = context.getPackageManager();
         ComponentName name = ComponentName.unflattenFromString(component);
-        Intent intent = null;
+
         if (name != null) {
-            intent = pm.getLaunchIntentForComponent(name);
+            Intent exact = new Intent(Intent.ACTION_MAIN)
+                    .addCategory(Intent.CATEGORY_LAUNCHER)
+                    .setComponent(name);
+            exact.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+            if (start(context, exact)) {
+                return;
+            }
         }
-        if (intent == null) {
-            intent = pm.getLaunchIntentForPackage(packageName);
-        }
-        if (intent == null) {
-            intent = new Intent(Intent.ACTION_MAIN)
+
+        Intent fallback = pm.getLaunchIntentForPackage(packageName);
+        if (fallback == null) {
+            fallback = new Intent(Intent.ACTION_MAIN)
                     .addCategory(Intent.CATEGORY_LAUNCHER)
                     .setPackage(packageName);
         }
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+        fallback.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+        start(context, fallback);
+    }
+
+    private static boolean start(@NonNull Context context, @NonNull Intent intent) {
         try {
             context.startActivity(intent);
+            return true;
         } catch (ActivityNotFoundException ignored) {
             // App removido entre a listagem e o toque: silencioso, como esperado.
+            return false;
         }
     }
 

@@ -26,6 +26,14 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+
+    lint {
+        // ObsoleteSdkInt sugere fundir mipmap-anydpi-v26 em mipmap-anydpi, mas o
+        // AAPT2 não resolve o recurso sem o qualificador de versão e o build quebra.
+        // NotifyDataSetChanged é dica genérica: aqui as listas têm poucas dezenas
+        // de itens e são recarregadas uma vez por gesto, não em scroll.
+        disable 'ObsoleteSdkInt', 'NotifyDataSetChanged'
+    }
 }
 
 dependencies {

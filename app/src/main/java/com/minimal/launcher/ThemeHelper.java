@@ -125,9 +125,9 @@ public final class ThemeHelper {
         if (new Prefs(activity).getHideSystemBars()) {
             controller.setSystemBarsBehavior(
                     WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
-            controller.hide(WindowInsetsControllerCompat.Type.systemBars());
+            controller.hide(WindowInsetsCompat.Type.systemBars());
         } else {
-            controller.show(WindowInsetsControllerCompat.Type.systemBars());
+            controller.show(WindowInsetsCompat.Type.systemBars());
         }
 
         controller.setAppearanceLightStatusBars(!dark);

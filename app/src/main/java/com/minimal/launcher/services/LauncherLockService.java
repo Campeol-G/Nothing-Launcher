@@ -2,6 +2,7 @@ package com.minimal.launcher.services;
 
 import android.accessibilityservice.AccessibilityService;
 import android.content.Intent;
+import android.os.Build;
 import android.provider.Settings;
 import android.view.accessibility.AccessibilityEvent;
 
@@ -27,10 +28,16 @@ public final class LauncherLockService extends AccessibilityService {
         return instance != null;
     }
 
-    /** Trava a tela. Retorna false se o serviço não estiver ativo. */
+    /**
+     * Trava a tela. Retorna false se o serviço não estiver ativo.
+     *
+     * <p>{@code GLOBAL_ACTION_LOCK_SCREEN} só existe a partir da API 28. Em
+     * Android 8 o duplo toque não faz nada - não há como travar a tela por
+     * AccessibilityService antes disso.
+     */
     public static boolean lockScreen() {
         LauncherLockService service = instance;
-        if (service == null) {
+        if (service == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
             return false;
         }
         return service.performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN);
@@ -52,9 +59,9 @@ public final class LauncherLockService extends AccessibilityService {
     }
 
     @Override
-    public void onUnbind(android.content.Intent intent) {
+    public boolean onUnbind(android.content.Intent intent) {
         instance = null;
-        super.onUnbind(intent);
+        return super.onUnbind(intent);
     }
 
     @Override

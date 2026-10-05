@@ -4,10 +4,10 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.os.Build;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 
 /**
  * Mantem relogio e data em dia sem timer proprio.
@@ -49,12 +49,10 @@ public final class SystemTimeWatcher {
         filter.addAction(Intent.ACTION_TIME_CHANGED);
         filter.addAction(Intent.ACTION_TIMEZONE_CHANGED);
         filter.addAction(Intent.ACTION_DATE_CHANGED);
-        // Broadcasts do sistema: precisam de RECEIVER_EXPORTED a partir da API 33.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            appContext.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED);
-        } else {
-            appContext.registerReceiver(receiver, filter);
-        }
+        // ACTION_TIME_TICK vem do sistema: sem RECEIVER_EXPORTED ele não chega
+        // no Android 13+.
+        ContextCompat.registerReceiver(appContext, receiver, filter,
+                ContextCompat.RECEIVER_EXPORTED);
     }
 
     public void stop() {

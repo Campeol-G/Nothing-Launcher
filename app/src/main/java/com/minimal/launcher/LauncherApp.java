@@ -3,7 +3,8 @@ package com.minimal.launcher;
 import android.app.Application;
 import android.content.Context;
 import android.content.IntentFilter;
-import android.os.Build;
+
+import androidx.core.content.ContextCompat;
 
 import com.minimal.launcher.apps.AppRepository;
 import com.minimal.launcher.apps.FavoritesStore;
@@ -29,12 +30,12 @@ public final class LauncherApp extends Application {
      * esta aberta.
      */
     private static void registerPackageWatcher(Context context) {
-        IntentFilter filter = PackageChangeReceiver.filter();
-        PackageChangeReceiver receiver = new PackageChangeReceiver();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED);
-        } else {
-            context.registerReceiver(receiver, filter);
-        }
+        // Broadcasts do sistema: precisam de RECEIVER_EXPORTED, senão Android 13+
+        // simplesmente não entrega. ContextCompat cuida da diferença de API.
+        ContextCompat.registerReceiver(
+                context,
+                new PackageChangeReceiver(),
+                PackageChangeReceiver.filter(),
+                ContextCompat.RECEIVER_EXPORTED);
     }
 }

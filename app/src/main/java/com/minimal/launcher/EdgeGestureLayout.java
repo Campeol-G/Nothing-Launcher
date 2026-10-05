@@ -1,5 +1,6 @@
 package com.minimal.launcher;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Rect;
 import android.util.AttributeSet;
@@ -129,12 +130,14 @@ public class EdgeGestureLayout extends FrameLayout {
     }
 
     @Override
+    @SuppressLint("ClickableViewAccessibility")
     public boolean onTouchEvent(MotionEvent event) {
         if (tracking) {
             return true;
         }
-        // Sem tracking, devolve o default: e o que permite o toque longo na area
-        // vazia ser reconhecido por quem define o listener.
+        // Sem tracking, devolve o default: é o que permite o toque longo na área
+        // vazia ser reconhecido por quem define o listener. performClick não é
+        // chamado porque clique simples na área vazia não faz nada, por projeto.
         return super.onTouchEvent(event);
     }
 

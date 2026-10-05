@@ -69,8 +69,9 @@ public final class AllAppsActivity extends AppCompatActivity
         empty = findViewById(R.id.empty);
         RecyclerView list = findViewById(R.id.all_apps_list);
 
-        ThemeHelper.applyEdgeToEdge(this, root, 26, 14, 20);
-        ThemeHelper.paintAll(root);
+        ThemeHelper.applyInsets(this, root, 26, 22, 8);
+        ThemeHelper.paint(root);
+        ThemeHelper.applySystemBars(this);
 
         List<AppEntry> all = AppRepository.get(this).getAllApps();
         adapter = new AppListAdapter(this, all, AppListAdapter.MODE_PICK, this);

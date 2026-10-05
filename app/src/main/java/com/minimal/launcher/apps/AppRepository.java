@@ -113,7 +113,7 @@ public final class AppRepository {
     @Nullable
     public String resolveCameraApp() {
         String camera = resolve(new Intent(MediaStore.ACTION_IMAGE_CAPTURE));
-        return camera != null ? camera : resolve(new Intent(MediaStore.ACTION_STILL_IMAGE_CAMERA));
+        return camera != null ? camera : resolve(new Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA));
     }
 
     /** Componente achatado do discador, ou null. */
