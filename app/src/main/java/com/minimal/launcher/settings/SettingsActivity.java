@@ -78,19 +78,49 @@ public final class SettingsActivity extends AppCompatActivity {
               recreate();
             })));
 
-    rows.addView(option(getString(R.string.settings_dominant_hand_title),
-        handLabel(prefs.getDominantHand()),
-        () -> chooseSingle(
-            getString(R.string.settings_dominant_hand_title),
-            new String[] { getString(R.string.hand_left),
-                getString(R.string.hand_right) },
-            Prefs.ALIGN_RIGHT.equals(prefs.getDominantHand()) ? 1 : 0,
-            index -> {
-              prefs.setDominantHand(index == 1
-                  ? Prefs.ALIGN_RIGHT
-                  : Prefs.ALIGN_LEFT);
-              recreate();
-            })));
+        rows.addView(option(getString(R.string.settings_dominant_hand_title),
+                handLabel(prefs.getDominantHand()),
+                () -> chooseSingle(
+                        getString(R.string.settings_dominant_hand_title),
+                        new String[]{getString(R.string.hand_left),
+                                getString(R.string.hand_right)},
+                        Prefs.ALIGN_RIGHT.equals(prefs.getDominantHand()) ? 1 : 0,
+                        index -> {
+                            prefs.setDominantHand(index == 1
+                                    ? Prefs.ALIGN_RIGHT : Prefs.ALIGN_LEFT);
+                            recreate();
+                        })));
+
+        rows.addView(option(getString(R.string.settings_clock_format_title),
+                Prefs.CLOCK_STACKED.equals(prefs.getClockFormat())
+                        ? getString(R.string.clock_format_stacked)
+                        : getString(R.string.clock_format_line),
+                () -> chooseSingle(
+                        getString(R.string.settings_clock_format_title),
+                        new String[]{getString(R.string.clock_format_stacked),
+                                getString(R.string.clock_format_line)},
+                        Prefs.CLOCK_STACKED.equals(prefs.getClockFormat()) ? 0 : 1,
+                        index -> {
+                            prefs.setClockFormat(index == 0
+                                    ? Prefs.CLOCK_STACKED : Prefs.CLOCK_LINE);
+                            recreate();
+                        })));
+
+        rows.addView(option(getString(R.string.settings_date_format_title),
+                Prefs.DATE_NUMERIC.equals(prefs.getDateFormat())
+                        ? getString(R.string.date_format_numeric)
+                        : getString(R.string.date_format_extended),
+                () -> chooseSingle(
+                        getString(R.string.settings_date_format_title),
+                        new String[]{getString(R.string.date_format_extended),
+                                getString(R.string.date_format_numeric)},
+                        Prefs.DATE_NUMERIC.equals(prefs.getDateFormat()) ? 1 : 0,
+                        index -> {
+                            prefs.setDateFormat(index == 1
+                                    ? Prefs.DATE_NUMERIC : Prefs.DATE_EXTENDED);
+                            recreate();
+                        })));
+
 
     rows.addView(option(getString(R.string.settings_font_size_title),
         fontSizeLabel(prefs.getFontScale()),

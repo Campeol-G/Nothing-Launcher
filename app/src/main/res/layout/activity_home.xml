@@ -42,8 +42,25 @@
             android:layout_weight="1"
             android:gravity="center"
             android:includeFontPadding="false"
+            android:letterSpacing="-0.04"
             android:maxLines="1"
             android:singleLine="true" />
+
+        <!--
+          Só existe no formato empilhado: 18 em cima, 02 embaixo. Escondido, ele
+          some do cálculo de peso e o relógio de cima fica com a faixa inteira.
+        -->
+        <TextView
+            android:id="@+id/clock_minutes"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:letterSpacing="-0.04"
+            android:maxLines="1"
+            android:singleLine="true"
+            android:visibility="gone" />
     </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView

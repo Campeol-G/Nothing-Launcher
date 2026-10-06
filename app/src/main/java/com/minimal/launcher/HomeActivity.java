@@ -42,6 +42,7 @@ public final class HomeActivity extends AppCompatActivity
     private EdgeGestureLayout root;
     private LinearLayout header;
     private TextView clock;
+    private TextView clockMinutes;
     private TextView date;
     private RecyclerView favoritesList;
 
@@ -67,6 +68,7 @@ public final class HomeActivity extends AppCompatActivity
         root = findViewById(R.id.root);
         header = findViewById(R.id.header);
         clock = findViewById(R.id.clock);
+        clockMinutes = findViewById(R.id.clock_minutes);
         date = findViewById(R.id.date);
         favoritesList = findViewById(R.id.favorites_list);
 
@@ -179,7 +181,9 @@ public final class HomeActivity extends AppCompatActivity
                 + LauncherUtils.getFontScale(this) + '|'
                 + LauncherUtils.getFontFactor(this) + '|'
                 + prefs.getColorCombo() + '|'
-                + prefs.getFontCombo();
+                + prefs.getFontCombo() + '|'
+                + prefs.getClockFormat() + '|'
+                + prefs.getDateFormat();
     }
 
     // ------------------------------------------------------------- relogio
@@ -191,8 +195,16 @@ public final class HomeActivity extends AppCompatActivity
 
     private void updateClock() {
         long now = System.currentTimeMillis();
-        clock.setText(ClockFormatter.time(this, now));
-        date.setText(ClockFormatter.dateCompact(this, now));
+        boolean stacked = Prefs.CLOCK_STACKED.equals(prefs.getClockFormat());
+        if (stacked) {
+            clock.setText(ClockFormatter.hours(this, now));
+            clockMinutes.setText(ClockFormatter.minutes(this, now));
+        } else {
+            clock.setText(ClockFormatter.time(this, now));
+        }
+        date.setText(Prefs.DATE_NUMERIC.equals(prefs.getDateFormat())
+                ? ClockFormatter.dateNumeric(this, now)
+                : ClockFormatter.dateExtended(this, now));
     }
 
     // ------------------------------------------------- bloco de hora e data
@@ -220,34 +232,57 @@ public final class HomeActivity extends AppCompatActivity
         header.setLayoutParams(params);
     }
 
-    /** Data e relógio: fonte de cada um e o tamanho do relógio. */
+    /**
+     * Data e relógio: fonte de cada um, e o desenho conforme o formato escolhido.
+     *
+     * <p>Empilhado mostra as horas em {@code clock} e os minutos em
+     * {@code clock_minutes}; linha única esconde os minutos e põe o horário
+     * inteiro em {@code clock}. Esconder devolve o peso ao relógio de cima, então
+     * ele passa a ocupar a faixa toda sozinho.
+     */
     private void applyTypography() {
         float scale = LauncherUtils.getFontScale(this);
+        boolean stacked = Prefs.CLOCK_STACKED.equals(prefs.getClockFormat());
+        boolean condensed = !stacked;
+
+        clockMinutes.setVisibility(stacked ? View.VISIBLE : View.GONE);
+
         date.setTextSize(TypedValue.COMPLEX_UNIT_PX,
                 getResources().getDimension(R.dimen.date_size) * scale);
-        clock.setTypeface(FontCombo.getClockFont(this));
+        clock.setTypeface(condensed
+                ? FontCombo.getClockFontCondensed(this)
+                : FontCombo.getClockFont(this));
+        clockMinutes.setTypeface(FontCombo.getClockFont(this));
         date.setTypeface(FontCombo.getInterfaceFont(this));
     }
 
     /**
      * O relógio preenche a faixa que sobra no bloco.
      *
-     * <p>O teto é a altura disponível abaixo da data, mas na prática o que limita
-     * é a <b>largura</b>: "21:41" usa cerca de 2.6 larguras de glifo, então num
-     * celular estreito o texto esbarra na borda antes de chegar no teto de
-     * altura. O autoSize reduz nesse caso, e é ele que mantém "9:41", "21:41" e
-     * "9:41 AM" dentro da tela sem cortar nem estourar as margins.
+     * <p>Os dois campos, no formato empilhado, dividem o espaço por igual: cada
+     * um recebe metade do que sobraria de um horário inteiro, e como só tem dois
+     * dígitos cada um esbarra muito menos na largura. Na linha única, o limite
+     * continua sendo a largura — por isso a fonte condensada — e o autoSize
+     * reduz para nunca cortar o texto.
      *
-     * <p>Se o relógio parecesse pequeno demais num aparelho específico, o ajuste
-     * é aqui: subir a fração em {@code LauncherUtils} aumenta a faixa, mas não o
-     * glifo — para o glifo crescer é preciso menos padding lateral.
+     * <p>O teto é a altura disponível abaixo da data, e o piso é pequeno de
+     * propósito: com dois dígitos na tela é impossível o texto ficar ilegível.
      */
     private void applyClockAutosize() {
         float dateHeight = getResources().getDimension(R.dimen.date_size)
                 * LauncherUtils.getFontScale(this);
         int available = Math.max(1, headerHeightPx - Math.round(dateHeight));
+        int floor = ThemeHelper.dp(this, 24);
+
+        // Empilhado: metade para cada linha. Linha única: a faixa inteira.
+        boolean stacked = Prefs.CLOCK_STACKED.equals(prefs.getClockFormat());
+        int ceiling = stacked ? available / 2 : available;
+        ceiling = Math.max(floor + 2, ceiling);
+
         clock.setAutoSizeTextTypeUniformWithConfiguration(
-                ThemeHelper.dp(this, 24), available, 2, TypedValue.COMPLEX_UNIT_PX);
+                floor, ceiling, 2, TypedValue.COMPLEX_UNIT_PX);
+        clockMinutes.setAutoSizeTextTypeUniformWithConfiguration(
+                floor, ceiling, 2, TypedValue.COMPLEX_UNIT_PX);
     }
 
     // -------------------------------------------------------- favoritos

@@ -178,18 +178,46 @@ de quebrar a tela.
 ## O bloco de hora e data
 
 A faixa de cima ocupa **28% da altura da tela** (`LauncherUtils.getHeaderHeightPx`),
-com folga sobre os 20% pedidos. Dentro dela a data fica no topo e o relógio
-preenche o resto.
+com folga sobre os 20% pedidos. Dentro dela ficam a data e o relógio.
 
 O relógio **não tem tamanho fixo**: usa `autoSize` com teto na altura disponível,
-então ele se ajusta ao aparelho e ao formato de hora. O `clock_size` saiu do
-`dimens.xml` justamente por isso.
+e o `clock_size` saiu do `dimens.xml` por isso.
 
-Um limite honesto: o que trava o relógio é a **largura**, não a altura.
-`21:41` ocupa cerca de 2.6 larguras de glifo, então num celular estreito o texto
-esbarra na borda antes de chegar no teto de altura — nesse caso o `autoSize`
-reduz e o bloco fica com respiro. Subir a fração aumenta a faixa, mas não o
-glifo; para o glifo crescer seria preciso menos padding lateral nas bordas.
+### Os dois formatos do relógio
+
+Um horário de cinco caracteres esbarra na **largura** antes da altura: `18:02`
+ocupa cerca de 2.55 larguras de glifo, e sobra quase metade da faixa sem uso.
+Por isso existem dois formatos, ambos medidos no aparelho:
+
+| Formato | Fonte | Altura do relógio | Quando |
+|---|---|---|---|
+| **Empilhado** (padrão) | Roboto Flex | **~598px** (duas linhas de ~299) | Padrão. Duas linhas de dois dígitos: cada uma esbarra muito menos na largura |
+| **Linha única** | Roboto Condensed | ~579px | Quem prefere o horário numa linha só |
+
+A linha única só ficou grande com a fonte condensada: a Roboto Condensed é da
+mesma família da Flex, então o desenho continua coerente. Sem ela, o mesmo
+formato ficaria em ~370px.
+
+O `autoSize` divide a faixa por igual no formato empilhado e usa a faixa inteira
+na linha única, e sempre reduz antes de cortar o texto — vale para `9:41`,
+`18:02` e `6:02 PM`.
+
+### Os dois formatos da data
+
+| Formato | Exemplo |
+|---|---|
+| **Por extenso** (padrão) | `6 de outubro de 2026` |
+| **Numérica** | `06/10/2026` |
+
+O numérico respeita a ordem do país: `10/06/2026` nos EUA, `06/10/2026` no
+Brasil. O por extenso ocupa bem mais espaço, o que também ajuda a preencher a
+faixa.
+
+### Onde ficam essas escolhas
+
+Cor de fundo, fontes, mão dominante, formato do relógio, formato da data e
+tamanho da fonte. Tudo isso entra na assinatura de preferências da tela
+principal, e a mudança recria a activity.
 
 A lista de favoritos é centralizada no espaço **abaixo** da faixa, e não na tela
 inteira: o deslocamento é um `translationY` de meia altura do cabeçalho, que é a

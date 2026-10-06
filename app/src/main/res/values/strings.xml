@@ -20,6 +20,14 @@
     <string name="settings_color_combo_summary">Uma das 10 combinações</string>
     <string name="settings_dominant_hand_title">Dominante</string>
     <string name="settings_dominant_hand_summary">Esquerda ou direita</string>
+    <string name="settings_clock_format_title">Relógio</string>
+    <string name="settings_clock_format_summary">Duas linhas ou uma linha condensada</string>
+    <string name="settings_date_format_title">Data</string>
+    <string name="settings_date_format_summary">Por extenso ou numérica</string>
+    <string name="clock_format_stacked">Empilhado</string>
+    <string name="clock_format_line">Linha única</string>
+    <string name="date_format_extended">Por extenso</string>
+    <string name="date_format_numeric">Numérica</string>
     <string name="settings_font_combo_title">Fontes</string>
     <string name="settings_font_combo_summary">Interface e relógio</string>
     <string name="settings_font_size_title">Tamanho da fonte</string>

@@ -25,6 +25,7 @@ public final class FontCombo {
     private static final Typeface[] INTERFACE_FONTS = new Typeface[8];
     private static final Typeface[] CLOCK_FONTS = new Typeface[8];
     private static final Typeface[] TITLE_FONTS = new Typeface[8];
+    private static final Typeface[] CLOCK_FONTS_CONDENSED = new Typeface[1];
 
     private FontCombo() {
     }
@@ -69,6 +70,22 @@ public final class FontCombo {
                 R.font.ibm_plex_sans_semibold,  // 6. IBM Plex Sans SemiBold
                 R.font.source_sans_3_semibold,  // 7. Source Sans 3 Semibold
                 R.font.lora_medium);            // 8. Lora Medium
+    }
+
+    /**
+     * Fonte condensada do relógio, para o formato de linha única.
+     *
+     * <p>Um horário de cinco caracteres esbarra na largura da tela antes da
+     * altura: "18:02" ocupa cerca de 2.55 larguras de glifo na Roboto Flex, e
+     * sobra quase metade da faixa de cima sem uso. A Roboto Condensed é da mesma
+     * família, então o desenho continua coerente e o relógio cresce.
+     *
+     * <p>Vale para todos os combos, e não por accidento: fonts.md escolhe Roboto
+     * Flex como a fonte de relógio justamente por ser a indicada para números.
+     */
+    @NonNull
+    public static Typeface getClockFontCondensed(@NonNull Context context) {
+        return load(context, CLOCK_FONTS_CONDENSED, R.font.roboto_condensed_regular);
     }
 
     /** Fonte da busca. Todos os combos usam a fonte de interface. */
