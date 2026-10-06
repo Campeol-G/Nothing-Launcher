@@ -34,6 +34,16 @@ public final class ThemeHelper {
     private ThemeHelper() {
     }
 
+    /**
+     * Piso da faixa reservada ao gesto do sistema, em dp.
+     *
+     * <p>O inset reportado costuma medir só a barra, uns 24dp, e é menor que a
+     * área que o sistema realmente treats como gesto de navegação. Sem o piso, o
+     * arrasto do usuário passaria a nascer dentro da zona sensível do sistema e
+     * os dois gestos competiriam. 48dp é a altura de referência do gesto.
+     */
+    private static final int SYSTEM_GESTURE_MARGIN_DP = 48;
+
     /** Deve ser chamado antes de {@code super.onCreate}. */
     public static void applyNightMode(@NonNull AppCompatActivity activity) {
         // Segue o sistema: as cores sao resolvidas por isDark(), que inverte o
@@ -264,6 +274,19 @@ public final class ThemeHelper {
                     bars.top + top,
                     bars.right + side,
                     bars.bottom + bottom);
+
+            // A faixa de gesto do sistema tambem precisa ser conhecida, e nao e a
+            // mesma coisa que a barra: com navegacao por gesto a barra e uma
+            // alça fininha e a area sensível e bem maior que ela.
+            if (view instanceof EdgeGestureLayout) {
+                Insets gestures = windowInsets.getInsets(
+                        WindowInsetsCompat.Type.systemGestures());
+                Insets nav = windowInsets.getInsets(
+                        WindowInsetsCompat.Type.navigationBars());
+                int reported = Math.max(gestures.bottom, nav.bottom);
+                ((EdgeGestureLayout) view).setBottomGestureExclusion(
+                        Math.max(reported, dp(view, SYSTEM_GESTURE_MARGIN_DP)));
+            }
             return windowInsets;
         });
         root.requestApplyInsets();

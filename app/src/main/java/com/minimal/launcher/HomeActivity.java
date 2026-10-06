@@ -102,16 +102,18 @@ public final class HomeActivity extends AppCompatActivity
 
         maxFavorites = LauncherUtils.getMaxFavorites(this);
 
-        // Sem gesto de arrastar para a busca, de propósito.
+        // Abrir a busca: arrasto para cima que comece ACIMA da faixa de gesto do
+        // sistema, ou toque longo na área vazia.
         //
-        // Com a navegação por gestos do Android, arrastar para cima a partir da
-        // borda inferior pertence ao sistema: é o gesto que abre o drawer, e é
-        // também o movimento que o polegar faz para alcançar a lista. Quando o
-        // app o interceptava, buscar e trocar de app viravam o mesmo gesto — e a
-        // busca disparava sem querer no meio de outra ação.
-        //
-        // Busca e Configurações foram para toque longo, em regiões diferentes da
-        // tela: o corpo abre a busca, o relógio abre as Configurações.
+        // O arrasto é recusado quando nasce na faixa do sistema: o dedo sai da
+        // borda inferior para trocar de app, e se o launcher respondesse ali os
+        // dois gestos seriam o mesmo. Acima da faixa não há disputa — o drawer só
+        // existe a partir da borda.
+        root.setEdgeGesture(EdgeGestureLayout.DIRECTION_UP, favoritesList,
+                () -> startActivity(new Intent(this, SearchActivity.class)));
+
+        // Toque longo na area vazia tambem abre a busca: e o caminho que nao
+        // depende de acertar o comeco do arrasto.
         root.setOnLongClickListener(v -> {
             startActivity(new Intent(this, SearchActivity.class));
             return true;

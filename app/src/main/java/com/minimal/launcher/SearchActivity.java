@@ -157,18 +157,42 @@ public final class SearchActivity extends AppCompatActivity implements AppMenu.L
         focusSearchAndShowKeyboard();
     }
 
-    /** Busca focada e teclado aberto. Repetido porque o teclado fecha sozinho. */
+    /**
+     * Busca focada e teclado aberto, sem delay artificial.
+     *
+     * <p>Aqui já houve um {@code postDelayed} de 200ms "para a janela assentar",
+     * e ele custava 200ms de latência toda vez que alguém queria trocar de app.
+     * O teclado é pedido de imediato e repetido no primeiro desenho da tela, que
+     * é quando a janela já está pronta: assim cobre os dois casos sem esperar.
+     */
     private void focusSearchAndShowKeyboard() {
         search.requestFocus();
-        search.postDelayed(() -> {
-            if (isFinishing() || isDestroyed()) {
-                return;
-            }
-            InputMethodManager imm = getSystemService(InputMethodManager.class);
-            if (imm != null && !imm.isActive(search)) {
-                imm.showSoftInput(search, InputMethodManager.SHOW_IMPLICIT);
-            }
-        }, 200);
+        showKeyboard();
+        search.getViewTreeObserver().addOnGlobalLayoutListener(
+                new android.view.ViewTreeObserver.OnGlobalLayoutListener() {
+                    private boolean done;
+
+                    @Override
+                    public void onGlobalLayout() {
+                        if (done || isFinishing() || isDestroyed()) {
+                            return;
+                        }
+                        done = true;
+                        showKeyboard();
+                        search.getViewTreeObserver()
+                                .removeOnGlobalLayoutListener(this);
+                    }
+                });
+    }
+
+    private void showKeyboard() {
+        if (isFinishing() || isDestroyed()) {
+            return;
+        }
+        InputMethodManager imm = getSystemService(InputMethodManager.class);
+        if (imm != null && !imm.isActive(search)) {
+            imm.showSoftInput(search, InputMethodManager.SHOW_IMPLICIT);
+        }
     }
 
     // -------------------------------------------------------------- resultado

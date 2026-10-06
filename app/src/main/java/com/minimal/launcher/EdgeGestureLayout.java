@@ -48,6 +48,19 @@ public class EdgeGestureLayout extends FrameLayout {
     @Nullable
     private Runnable doubleTapListener;
 
+    /**
+     * Faixa da borda inferior onde o gesto deste layout nao vale.
+     *
+     * <p>Com a navegacao por gestos do Android, arrastar para cima a partir da
+     * borda inferior pertence ao sistema — e e o mesmo movimento que o polegar
+     * faz para alcancar a lista. Sem esta exclusao, buscar e trocar de app
+     * viravam o mesmo gesto, e a busca disparava no meio de outra acao.
+     *
+     * <p>O valor vem do inset de gestos do sistema, entao respeita o aparelho: nos
+     * que usam gesto, e a altura da barra de navegacao nos que usam botoes.
+     */
+    private int bottomGestureExclusionPx;
+
     private final float touchSlop;
     private final Rect childBounds = new Rect();
     private GestureDetector doubleTapDetector;
@@ -56,6 +69,7 @@ public class EdgeGestureLayout extends FrameLayout {
     private boolean tracking;
     private boolean shouldIntercept;
     private boolean inChildAtDown;
+    private boolean startedInSystemGestureZone;
     private float downX;
     private float downY;
     private float travel;
@@ -87,6 +101,15 @@ public class EdgeGestureLayout extends FrameLayout {
         this.edgeListener = listener;
     }
 
+    /**
+     * Altura da faixa inferior onde o gesto nao vale. Vem dos insets do sistema.
+     *
+     * @see #bottomGestureExclusionPx
+     */
+    public void setBottomGestureExclusion(int pixels) {
+        bottomGestureExclusionPx = Math.max(0, pixels);
+    }
+
     public void setOnDoubleTapListener(@Nullable Runnable listener) {
         doubleTapListener = listener;
         doubleTapDetector = listener == null ? null : new GestureDetector(
@@ -109,6 +132,7 @@ public class EdgeGestureLayout extends FrameLayout {
         tracking = false;
         shouldIntercept = false;
         inChildAtDown = false;
+        startedInSystemGestureZone = false;
         travel = 0f;
         lastSignedTravel = 0f;
         gateOpenedAtTravel = -1f;
@@ -151,10 +175,10 @@ public class EdgeGestureLayout extends FrameLayout {
                 lastSignedTravel = 0f;
                 tracking = false;
                 inChildAtDown = isInsideScrollChild(downX, downY);
+                startedInSystemGestureZone = startsInBottomGestureExclusion(downY);
                 minTravelPx = computeMinTravel();
                 gateOpenedAtTravel = gateIsOpen() ? 0f : -1f;
                 return false;
-
             case MotionEvent.ACTION_MOVE: {
                 float dx = event.getRawX() - downX;
                 float dy = event.getRawY() - downY;
@@ -214,10 +238,27 @@ public class EdgeGestureLayout extends FrameLayout {
         return childBounds.contains((int) rawX, (int) rawY);
     }
 
+    /** O toque comecou na faixa inferior que pertence ao sistema? */
+    private boolean startsInBottomGestureExclusion(float rawY) {
+        if (bottomGestureExclusionPx <= 0) {
+            return false;
+        }
+        float height = getHeight() > 0
+                ? getHeight()
+                : getResources().getDisplayMetrics().heightPixels;
+        // A faixa e medida a partir da borda de baixo da tela. A janela e
+        // edge-to-edge, entao a propria tela e a referencia.
+        return rawY > height - bottomGestureExclusionPx;
+    }
+
     /**
      * O portão. Fechado significa "a lista precisa do gesto agora".
      */
     private boolean gateIsOpen() {
+        if (startedInSystemGestureZone) {
+            // Nasceu na faixa do sistema: o app nao disputa aquele gesto.
+            return false;
+        }
         if (scrollChild == null) {
             return true;
         }

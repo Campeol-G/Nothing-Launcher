@@ -82,19 +82,37 @@ quiser, e é aí que as notificações aparecem como sempre.
 | Na busca: tocar no resultado, ou enter | Abre esse app |
 | Na busca: deslizar para baixo ou voltar | Fecha a busca |
 
-### Por que não há arrastar para cima
+### Por que o arrasto para cima não colide com o sistema
 
 Com a navegação por gestos do Android, arrastar para cima a partir da borda
-inferior é do sistema: é o gesto que abre o drawer, e é também o movimento que o
-polegar faz para alcançar a lista. Quando o launcher interceptava esse arrasto,
-**buscar e trocar de app viravam o mesmo gesto** — e a busca disparava sem
-querer no meio de outra ação.
+inferior pertence ao sistema: é o gesto que abre o drawer, e é também o
+movimento que o polegar faz para alcançar a lista. Quando o launcher
+interceptava esse arrasto, **buscar e trocar de app viravam o mesmo gesto**.
 
-Por isso a busca é um toque longo na área vazia, e as Configurações um toque
-longo no relógio. São regiões diferentes da tela, então não há ambiguidade, e
-nenhum dos dois disputa espaço com o sistema. Deslizar para baixo na busca
-continua fechando: essa puxada do sistema começa na borda superior, e o arrasto
-do app é decidido no meio da tela.
+O arrasto para cima continua existindo, mas só vale quando **começa acima** da
+faixa reservada ao sistema. A faixa é o maior valor entre o inset de gestos, o da
+barra de navegação e um piso de **48dp** — o inset reportado costuma medir só a
+barra, uns 24dp, e é menor que a área que o sistema trata como gesto. Medido no
+aparelho: a exclusão cobre os 126px de baixo, e o arrasto a partir de y=2280
+sobe.
+
+Acima da faixa não há disputa, porque o drawer do sistema só existe a partir da
+borda.
+
+O **toque longo** na área vazia continua sendo o caminho que não depende de
+acertar o começo do arrasto. E as Configurações são um toque longo no relógio,
+que é uma região diferente da tela.
+
+Deslizar para baixo na busca continua fechando: essa puxada do sistema começa na
+borda superior, e o arrasto do app é decidido no meio da tela. Quem preferir não
+usar gesto algum tem o botão voltar do sistema e o Enter do teclado.
+
+### Latência de entrada na busca
+
+O teclado é pedido de imediato e repetido no primeiro desenho da tela, quando a
+janela já está pronta. Não há delay artificial: um `postDelayed` de 200ms que
+existia aqui custava 200ms de latência toda vez que alguém queria trocar de app,
+somados à espera do toque longo.
 
 ### A fonte se ajusta ao aparelho
 
