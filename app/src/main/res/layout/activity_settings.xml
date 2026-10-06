@@ -5,7 +5,6 @@
     android:layout_height="match_parent">
 
     <LinearLayout
-        android:id="@+id/settings_column"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical">
@@ -14,11 +13,9 @@
             android:id="@+id/settings_title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:fontFamily="sans-serif-light"
             android:includeFontPadding="false"
             android:paddingBottom="@dimen/settings_section_padding"
             android:text="@string/settings_title"
-            android:textColor="@color/fg_dark"
             android:textSize="@dimen/settings_title_size" />
 
         <ScrollView

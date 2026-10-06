@@ -6,36 +6,48 @@
     <string name="favorites_list_description">Lista de apps favoritos</string>
     <string name="all_apps_list_description">Lista de todos os apps</string>
 
-    <!-- Todos os apps -->
+    <!-- Todos os apps / busca -->
     <string name="search_hint">Buscar</string>
-    <string name="all_apps_empty">Nenhum app encontrado</string>
+    <string name="search_idle_hint">Digite o nome de um app</string>
+    <string name="search_no_results">Nenhum app encontrado</string>
+    <string name="search_more_one">+1 outro app</string>
+    <string name="search_more_many">+%1$d outros apps</string>
+    <string name="search_footer">Enter abre · descer fecha</string>
 
     <!-- Configurações -->
     <string name="settings_title">Configurações</string>
-    <string name="pref_theme_title">Tema</string>
-    <string name="pref_alignment_title">Alinhamento da lista</string>
-    <string name="pref_vertical_position_title">Posição vertical da lista</string>
-    <string name="pref_font_size_title">Tamanho da fonte</string>
-    <string name="pref_hide_bars_title">Esconder barras do sistema</string>
-    <string name="pref_hide_bars_summary">Modo imersivo. Puxe a barra para mostrá-la.</string>
-    <string name="pref_notification_dot_title">Indicador de notificação</string>
-    <string name="pref_notification_dot_summary">Ponto sob a data quando houver notificações ativas.</string>
-    <string name="pref_double_tap_lock_title">Duplo toque para bloquear</string>
-    <string name="pref_double_tap_lock_summary">Requer o serviço de acessibilidade.</string>
-    <string name="pref_manage_favorites_title">Gerenciar favoritos</string>
+    <string name="settings_color_combo_title">Cor de fundo</string>
+    <string name="settings_color_combo_summary">Uma das 10 combinações</string>
+    <string name="settings_dominant_hand_title">Dominante</string>
+    <string name="settings_dominant_hand_summary">Esquerda ou direita</string>
+    <string name="settings_font_combo_title">Fontes</string>
+    <string name="settings_font_combo_summary">Interface e relógio</string>
+    <string name="settings_font_size_title">Tamanho da fonte</string>
+    <string name="hand_right">Direita</string>
+    <string name="hand_left">Esquerda</string>
 
-    <!-- Opções de tema -->
-    <string name="theme_system">Seguir o sistema</string>
-    <string name="theme_dark">Preto</string>
-    <string name="theme_light">Branco</string>
+    <!-- Combinações de cor (colors.md) -->
+    <string name="color_combo_1">1. Creme + Marrom</string>
+    <string name="color_combo_2">2. Bege + Marrom Escuro</string>
+    <string name="color_combo_3">3. Cinza Claro + Grafite</string>
+    <string name="color_combo_4">4. Aço + Grafite frio</string>
+    <string name="color_combo_5">5. Verde Sálvia + Verde Escuro</string>
+    <string name="color_combo_6">6. Areia + Marrom</string>
+    <string name="color_combo_7">7. Amarelo Pálido + Marrom</string>
+    <string name="color_combo_8">8. Rosa Queimado Claro + Vinho Escuro</string>
+    <string name="color_combo_9">9. Azul Céu + Azul Petróleo</string>
+    <string name="color_combo_10">10. Off-White + Preto Suave</string>
+    <string name="color_combo_11">11. Preto OLED</string>
 
-    <!-- Opções de alinhamento -->
-    <string name="align_right">Direita</string>
-    <string name="align_left">Esquerda</string>
-
-    <!-- Opções de posição vertical -->
-    <string name="vpos_center">Centralizada</string>
-    <string name="vpos_bottom">Perto do polegar</string>
+    <!-- Combinações de fonte (fonts.md) -->
+    <string name="font_combo_1">1. Noto Sans + Roboto Flex</string>
+    <string name="font_combo_2">2. Nunito + Roboto Flex</string>
+    <string name="font_combo_3">3. Noto Sans + Lora</string>
+    <string name="font_combo_4">4. Atkinson Hyperlegible + Roboto Flex</string>
+    <string name="font_combo_5">5. Roboto + Roboto Flex</string>
+    <string name="font_combo_6">6. IBM Plex Sans + Roboto Flex</string>
+    <string name="font_combo_7">7. Source Sans 3 + Roboto Flex</string>
+    <string name="font_combo_8">8. Nunito + Lora</string>
 
     <!-- Opções de fonte -->
     <string name="font_size_small">Pequeno</string>
@@ -43,18 +55,8 @@
     <string name="font_size_large">Grande</string>
     <string name="font_size_huge">Muito grande</string>
 
-    <!-- Acesso a notificações -->
-    <string name="notification_access_title">Acesso a notificações</string>
-    <string name="notification_access_summary">Conceda acesso para que o indicador possa funcionar.</string>
-
-    <!-- Serviço de acessibilidade -->
-    <string name="accessibility_service_title">Serviço de acessibilidade</string>
-    <string name="accessibility_service_label">Minimal Launcher — bloqueio por toque duplo</string>
-    <string name="accessibility_service_description">Usado apenas para travar a tela quando você faz dois toques na tela inicial. Não coleta nem compartilha nada.</string>
-    <string name="accessibility_service_summary_title">Ativar serviço de acessibilidade</string>
-    <string name="accessibility_service_summary_message">O duplo toque para bloquear precisa deste serviço, porque só um serviço de acessibilidade pode travar a tela.\n\nAbra as configurações de acessibilidade, ative \"Minimal Launcher — bloqueio por toque duplo\" e volte aqui.</string>
-    <string name="accessibility_service_summary_positive">Abrir configurações</string>
-    <string name="accessibility_service_active">Ativo</string>
+    <!-- Favoritos -->
+    <string name="favorites_limit_reached">Máximo de favoritos atingido</string>
 
     <!-- Menu do toque longo -->
     <string name="menu_add_favorite">Favoritar</string>

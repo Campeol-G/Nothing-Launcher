@@ -3,5 +3,4 @@
     android:id="@+id/app_name"
     style="@style/AppNameText"
     android:ellipsize="end"
-    android:maxLines="1"
-    android:textColor="@color/fg_dark" />
+    android:maxLines="1" />
