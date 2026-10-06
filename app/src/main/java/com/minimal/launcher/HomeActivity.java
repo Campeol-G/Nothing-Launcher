@@ -84,8 +84,9 @@ public final class HomeActivity extends AppCompatActivity
         favoritesList.setLayoutManager(new LinearLayoutManager(this));
         favoritesList.setAdapter(favoritesAdapter);
 
-        // Centralizada na vertical, na lateral da ma dominante: onde o polegar
-        // alcanca sem o olhar ter que descer ate o rodape da tela.
+        // Logo abaixo do relógio, na lateral da ma dominante: onde o polegar
+        // alcanca e com o horario em vista. A margem superior e a altura do
+        // cabecalho mais uma folga curta, e o gravity top faz o resto.
         int horizontal = Prefs.ALIGN_RIGHT.equals(prefs.getDominantHand())
                 ? Gravity.END : Gravity.START;
         ViewGroup.LayoutParams raw = favoritesList.getLayoutParams();
@@ -94,14 +95,10 @@ public final class HomeActivity extends AppCompatActivity
                 : new FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT);
-        params.gravity = Gravity.CENTER_VERTICAL | horizontal;
+        params.gravity = Gravity.TOP | horizontal;
+        params.topMargin = headerHeightPx + clockListGapPx();
         favoritesList.setLayoutParams(params);
         favoritesList.setPadding(0, 0, 0, 0);
-
-        // O gravity acima centraliza na tela inteira, mas o topo pertence ao
-        // bloco do relógio. Deslocar meia altura do cabeçalho é a correção exata
-        // para centralizar no espaço que sobra abaixo dele.
-        favoritesList.setTranslationY(headerHeightPx / 2f);
 
         maxFavorites = LauncherUtils.getMaxFavorites(this);
 
@@ -205,6 +202,11 @@ public final class HomeActivity extends AppCompatActivity
         date.setText(Prefs.DATE_NUMERIC.equals(prefs.getDateFormat())
                 ? ClockFormatter.dateNumeric(this, now)
                 : ClockFormatter.dateExtended(this, now));
+    }
+
+    /** Folga entre o fim do relógio e o começo da lista de apps. */
+    private int clockListGapPx() {
+        return getResources().getDimensionPixelSize(R.dimen.clock_list_gap);
     }
 
     // ------------------------------------------------- bloco de hora e data

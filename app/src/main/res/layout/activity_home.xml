@@ -35,16 +35,24 @@
             android:letterSpacing="0.22"
             android:textSize="@dimen/date_size" />
 
+        <!--
+          maxLines sem singleLine, de propósito.
+
+          singleLine="true" no Android também liga ellipsize=END e
+          horizontallyScrolling. Com os dois ligados o autoSize deixa de encolher o
+          texto e o horário aparece cortado como "19:...". maxLines sozinho deixa
+          o autoSize fazer o trabalho dele, que é nunca cortar.
+        -->
         <TextView
             android:id="@+id/clock"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
+            android:ellipsize="none"
             android:gravity="center"
             android:includeFontPadding="false"
             android:letterSpacing="-0.04"
-            android:maxLines="1"
-            android:singleLine="true" />
+            android:maxLines="1" />
 
         <!--
           Só existe no formato empilhado: 18 em cima, 02 embaixo. Escondido, ele
@@ -55,19 +63,26 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
+            android:ellipsize="none"
             android:gravity="center"
             android:includeFontPadding="false"
             android:letterSpacing="-0.04"
             android:maxLines="1"
-            android:singleLine="true"
             android:visibility="gone" />
     </LinearLayout>
 
+    <!--
+      Ancorada logo abaixo do bloco do relógio, e não centralizada: o gravity é
+      top e a distância vem de uma margem superior igual à altura do cabeçalho
+      mais a folga. Antes era center_vertical com um translationY de meia altura
+      do cabeçalho, que centralizava a lista no meio da tela e deixava o relógio
+      longe dela.
+    -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/favorites_list"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center_vertical"
+        android:layout_gravity="top"
         android:clipToPadding="false"
         android:contentDescription="@string/favorites_list_description"
         android:overScrollMode="never"

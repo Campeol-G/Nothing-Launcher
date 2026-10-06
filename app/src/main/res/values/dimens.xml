@@ -18,6 +18,8 @@
 
     <dimen name="header_bottom_padding">18dp</dimen>
     <dimen name="clock_date_gap">4dp</dimen>
+    <!-- Folga entre o fim do bloco do relógio e o começo da lista. -->
+    <dimen name="clock_list_gap">20dp</dimen>
     <dimen name="app_row_padding">10dp</dimen>
     <dimen name="search_bar_top_margin">10dp</dimen>
     <dimen name="search_bar_inner_padding">14dp</dimen>

@@ -202,6 +202,18 @@ O `autoSize` divide a faixa por igual no formato empilhado e usa a faixa inteira
 na linha única, e sempre reduz antes de cortar o texto — vale para `9:41`,
 `18:02` e `6:02 PM`.
 
+Duas armadilhas do `TextView` que custaram tempo aqui, e que valem registrar:
+
+- `android:singleLine="true"` **também** liga `ellipsize=END` e
+  `horizontallyScrolling`. Com os dois, o `autoSize` deixa de encolher e o
+  horário aparece cortado como `19:...`. Só `android:maxLines="1"`, mais
+  `ellipsize="none"`.
+- O `LayoutParams` do `header` é de `FrameLayout`, não de `LinearLayout`, porque
+  quem decide essa classe é o **pai** — o `EdgeGestureLayout`. Passar a errada
+  estoura com `ClassCastException` dentro de `FrameLayout.onMeasure`, e o app não
+  abre. O compilador aceita, porque `setLayoutParams` recebe qualquer
+  `ViewGroup.LayoutParams`.
+
 ### Os dois formatos da data
 
 | Formato | Exemplo |
@@ -219,9 +231,9 @@ Cor de fundo, fontes, mão dominante, formato do relógio, formato da data e
 tamanho da fonte. Tudo isso entra na assinatura de preferências da tela
 principal, e a mudança recria a activity.
 
-A lista de favoritos é centralizada no espaço **abaixo** da faixa, e não na tela
-inteira: o deslocamento é um `translationY` de meia altura do cabeçalho, que é a
-correção exata para centralizar no que sobra.
+A lista de favoritos fica **logo abaixo do relógio**, com uma folga curta
+(`clock_list_gap`), e não centralizada na tela: o gravity é `top` e a distância
+vem de uma margem superior igual à altura do cabeçalho mais a folga.
 
 ## Estrutura
 

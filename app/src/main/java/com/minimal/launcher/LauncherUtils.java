@@ -106,7 +106,9 @@ public final class LauncherUtils {
             return MIN;
         }
 
-        float usable = usableHeightPx(context) - headerHeight - BOTTOM_CHROME_DP * density;
+        float gap = context.getResources().getDimension(R.dimen.clock_list_gap);
+        float usable = usableHeightPx(context) - headerHeight - gap
+                - BOTTOM_CHROME_DP * density;
         return Math.max(MIN, Math.min(MAX, (int) (usable / rowHeight)));
     }
 }
