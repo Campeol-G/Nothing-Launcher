@@ -74,13 +74,13 @@ public class EdgeGestureLayout extends FrameLayout {
     }
 
     /**
-     * @param direction {@link #DIRECTION_UP} abre a lista de todos os apps,
+     * @param direction {@link #DIRECTION_UP} abre a busca,
      *                  {@link #DIRECTION_DOWN} fecha a tela atual.
-     * @param scrollChild a lista que disputa o gesto.
+     * @param scrollChild a lista que disputa o gesto, ou null se não houver.
      * @param listener o que fazer quando o gesto for aceito.
      */
     public void setEdgeGesture(int direction,
-                              @NonNull View scrollChild,
+                              @Nullable View scrollChild,
                               @NonNull OnEdgeGestureListener listener) {
         this.direction = direction;
         this.scrollChild = scrollChild;

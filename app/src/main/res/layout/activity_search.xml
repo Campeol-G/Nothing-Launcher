@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Busca: paleta própria, barra arredondada no topo, e o resultado único
+  ocupando o centro da tela com o nome bem grande.
+
+  A linha de "outros" existe por um motivo funcional: como só aparece um app por
+  vez, sem ela o usuário não teria como saber que digitar mais uma letra troca o
+  resultado. Deslizar para baixo fecha.
+-->
+<com.minimal.launcher.EdgeGestureLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <FrameLayout
+            android:id="@+id/search_bar_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/search_bar_top_margin"
+            android:layout_marginHorizontal="@dimen/settings_section_padding">
+
+            <EditText
+                android:id="@+id/search"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_margin="@dimen/search_bar_inner_padding"
+                android:background="@null"
+                android:hint="@string/search_hint"
+                android:imeOptions="actionGo|flagNoExtractUi"
+                android:importantForAutofill="no"
+                android:inputType="text|textNoSuggestions"
+                android:maxLines="1"
+                android:singleLine="true"
+                android:textCursorDrawable="@null" />
+        </FrameLayout>
+
+        <FrameLayout
+            android:id="@+id/search_result_container"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <LinearLayout
+                android:id="@+id/search_result_block"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:orientation="vertical"
+                android:paddingHorizontal="@dimen/settings_section_padding"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/search_result"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:ellipsize="end"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:includeFontPadding="false"
+                    android:paddingVertical="@dimen/app_row_padding"
+                    android:singleLine="true"
+                    android:textSize="@dimen/search_result_size" />
+
+                <TextView
+                    android:id="@+id/search_more"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:includeFontPadding="false"
+                    android:paddingTop="@dimen/search_more_top_padding"
+                    android:textSize="@dimen/settings_summary_size" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/search_empty_hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:paddingHorizontal="@dimen/settings_section_padding"
+                android:textSize="@dimen/search_size"
+                android:visibility="gone" />
+        </FrameLayout>
+
+        <TextView
+            android:id="@+id/search_footer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:paddingBottom="@dimen/search_footer_padding"
+            android:text="@string/search_footer"
+            android:textSize="@dimen/settings_summary_size" />
+    </LinearLayout>
+
+</com.minimal.launcher.EdgeGestureLayout>

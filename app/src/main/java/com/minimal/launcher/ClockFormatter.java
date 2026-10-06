@@ -24,6 +24,12 @@ public final class ClockFormatter {
         return DateFormat.getTimeFormat(context).format(new Date(millis));
     }
 
+    /** Data compacta (dd MMM), sempre com o nome do mês no idioma do celular. */
+    public static String dateCompact(@NonNull Context context, long millis) {
+        Locale locale = Locale.getDefault();
+        return new java.text.SimpleDateFormat("dd MMM", locale).format(new Date(millis));
+    }
+
     public static String date(@NonNull Context context, long millis) {
         Locale locale = Locale.getDefault();
         String skeleton = DateFormat.getBestDateTimePattern(locale, "EEEdMMM");
