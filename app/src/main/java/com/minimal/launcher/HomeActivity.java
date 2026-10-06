@@ -203,15 +203,19 @@ public final class HomeActivity extends AppCompatActivity
      * <p>Precisa ser em pixels e não em {@code wrap_content}: o relógio usa
      * autoSize dentro do espaço que sobra no bloco, e o autoSize só funciona se a
      * altura for conhecida.
+     *
+     * <p>Os LayoutParams são de {@link FrameLayout} porque é o pai — o
+     * EdgeGestureLayout — que decide essa classe, e não o header, que por acaso
+     * é um LinearLayout. Passar LinearLayout.LayoutParams aqui estoura com
+     * ClassCastException dentro de {@code FrameLayout.onMeasure}.
      */
     private void applyHeaderHeight() {
         headerHeightPx = LauncherUtils.getHeaderHeightPx(this);
         ViewGroup.LayoutParams raw = header.getLayoutParams();
-        LinearLayout.LayoutParams params =
-                (raw instanceof LinearLayout.LayoutParams)
-                        ? (LinearLayout.LayoutParams) raw
-                        : new LinearLayout.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT, headerHeightPx);
+        FrameLayout.LayoutParams params = (raw instanceof FrameLayout.LayoutParams)
+                ? (FrameLayout.LayoutParams) raw
+                : new FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, headerHeightPx);
         params.height = headerHeightPx;
         header.setLayoutParams(params);
     }
