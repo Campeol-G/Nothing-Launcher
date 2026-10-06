@@ -9,3 +9,11 @@ captures/
 .cxx/
 *.apk
 *.aab
+
+# Eclipse / Android Studio (sem Gradle)
+.project
+.settings/
+.classpath
+
+# Log de sessao de ferramenta
+session-ses_*.md
