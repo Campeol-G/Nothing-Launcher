@@ -1,19 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Escala tipográfica. Multiplicada pela preferência de tamanho de fonte. -->
-    <dimen name="clock_size">46sp</dimen>
-    <dimen name="date_size">13sp</dimen>
-    <dimen name="app_name_size">19sp</dimen>
-    <dimen name="search_size">19sp</dimen>
-    <dimen name="settings_title_size">26sp</dimen>
-    <dimen name="settings_row_size">16sp</dimen>
-    <dimen name="settings_summary_size">12sp</dimen>
+    <!--
+      Escala tipográfica. Cada valor é multiplicado pelo ajuste automático de
+      tela (LauncherUtils.getFontFactor) e depois pelo passo escolhido nas
+      Configurações.
+
+      Não há tamanho de relógio aqui: o relógio usa autoSize para preencher a
+      faixa que sobra no bloco de hora e data, e seu teto vem da altura da tela.
+    -->
+    <dimen name="date_size">15sp</dimen>
+    <dimen name="app_name_size">22sp</dimen>
+    <dimen name="search_result_size">28sp</dimen>
+    <dimen name="search_size">22sp</dimen>
+    <dimen name="settings_title_size">28sp</dimen>
+    <dimen name="settings_row_size">17sp</dimen>
+    <dimen name="settings_summary_size">13sp</dimen>
 
     <dimen name="header_bottom_padding">18dp</dimen>
-    <dimen name="clock_date_gap">2dp</dimen>
-    <dimen name="notification_dot_size">6dp</dimen>
-    <dimen name="notification_dot_margin">12dp</dimen>
-    <dimen name="app_row_padding">7dp</dimen>
+    <dimen name="clock_date_gap">4dp</dimen>
+    <dimen name="app_row_padding">10dp</dimen>
+    <dimen name="search_bar_top_margin">10dp</dimen>
+    <dimen name="search_bar_inner_padding">14dp</dimen>
+    <dimen name="search_more_top_padding">2dp</dimen>
+    <dimen name="search_footer_padding">6dp</dimen>
     <dimen name="settings_row_padding_v">14dp</dimen>
     <dimen name="settings_section_padding">26dp</dimen>
 </resources>

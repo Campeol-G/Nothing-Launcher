@@ -1,6 +1,7 @@
 package com.minimal.launcher.apps;
 
 import android.content.Context;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -12,8 +13,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Menu do toque longo. Mesmo menu na lista de favoritos e na lista de todos os
- * apps: nada de ícone, nada de submenu, no maximo quatro linhas de texto.
+ * Menu do toque longo. Mesmo menu na tela inicial e na busca: nada de icone,
+ * nada de submenu, no maximo quatro linhas de texto.
+ *
+ * <p>O limite de favoritos e passado por quem chama, porque o mesmo menu
+ * aparece nas duas telas e cada uma conhece o proprio espaco disponivel.
  */
 public final class AppMenu {
 
@@ -36,6 +40,17 @@ public final class AppMenu {
     public static void show(@NonNull final Context context,
                             @NonNull final AppEntry entry,
                             @Nullable final Listener listener) {
+        show(context, entry, listener, Integer.MAX_VALUE);
+    }
+
+    /**
+     * @param maxFavorites quantos favoritos cabem na tela. Ao estourar, o app
+     *                    avisa em vez de adicionar.
+     */
+    public static void show(@NonNull final Context context,
+                            @NonNull final AppEntry entry,
+                            @Nullable final Listener listener,
+                            final int maxFavorites) {
         final FavoritesStore favorites = new FavoritesStore(context);
         final boolean isFavorite = favorites.isFavorite(entry.component);
         final boolean canUninstall = AppRepository.get(context).canUninstall(entry.packageName);
@@ -67,11 +82,14 @@ public final class AppMenu {
                         case ACTION_FAVORITE:
                             if (isFavorite) {
                                 favorites.remove(entry.component);
+                                notifyChanged(listener);
+                            } else if (favorites.getFavorites().size() >= maxFavorites) {
+                                // A tela inicial esta cheia: o app avisa e nao adiciona.
+                                Toast.makeText(context, R.string.favorites_limit_reached,
+                                        Toast.LENGTH_SHORT).show();
                             } else {
                                 favorites.add(entry);
-                            }
-                            if (listener != null) {
-                                listener.onFavoritesChanged();
+                                notifyChanged(listener);
                             }
                             break;
                         case ACTION_INFO:
@@ -90,5 +108,11 @@ public final class AppMenu {
                     }
                 })
                 .show();
+    }
+
+    private static void notifyChanged(@Nullable Listener listener) {
+        if (listener != null) {
+            listener.onFavoritesChanged();
+        }
     }
 }
