@@ -64,8 +64,49 @@ encerrar. Por isso as duas peças entram juntas aqui, cada uma com seu papel:
 
 Limitação honesta: mesmo com Shizuku, apps de sistema (relógio, telefone,
 configurações) não são encerrados por `force-stop`. O app de referência avisa a
-mesma limitação — e por isso as linhas de app de sistema não têm X, que seria
-um botão que não faz nada.
+mesma limitação.
+
+## O que o X significa
+
+O X significa **sair da lista**, sempre, para qualquer app. Quando o app pode
+ser encerrado, ele também é encerrado; quando não pode, só sai da lista. O que
+o usuário vê é sempre a mesma coisa — a linha some. O encerramento é detalhe
+interno, não promessa visível.
+
+Isso é uma escolha, e a alternativa era pior. Se o X significasse "encerrar" e
+fosse escondido onde não dá para encerrar, a mesma linha do X teria dois
+significados diferentes conforme o app, e o usuário não teria como saber qual
+é qual antes de tocar. Botão com comportamento variável é pior que botão
+ausente.
+
+Por isso **todo app tem X**, inclusive os de sistema. O que muda entre eles é o
+efeito colateral, não o botão.
+
+## A remoção precisa sobreviver ao fechamento da tela
+
+A lista é re-lida do `UsageStatsManager` a cada `onResume`. Se o X só removesse
+a linha da lista em memória, a linha voltaria na próxima vez que a tela
+abrisse — o botão não limpava nada. E o `UsageStatsManager` não tem API pública
+para apagar um evento.
+
+Então a remoção é persistida, no mesmo padrão do `FavoritesStore`: uma
+chave por pacote guardando **quando** o app foi dispensado.
+
+O detalhe que faz isso se manter honesto sozinho: o filtro compara o instante
+da dispensa com o `lastTimeUsed` do evento. Um app é escondido só enquanto
+
+```
+dismissedAt >= lastTimeUsed
+```
+
+Se o usuário abrir o app de novo depois, o evento novo tem `lastTimeUsed` maior
+que a dispensa, e o app **volta sozinho** para a lista. Não existe "limpar
+tudo" que apague um app para sempre: o histórico manda, e a dispensa só vale
+enquanto o app não for usado de novo. Nenhum dado precisa ser expirado ou
+limpo, porque a comparação já resolve.
+
+`DismissedStore` guarda `pacote -> instante`, em `SharedPreferences`, no mesmo
+formato `\n`-joinado do `FavoritesStore`, com as chaves em `Prefs`.
 
 ## Mapa de pacotes e classes
 
@@ -78,6 +119,7 @@ sentir nada.
 |---|---|
 | `RecentAppsActivity` | A tela. Monta a lista, trata clique, X e limpar tudo. |
 | `RecentAppsSource` | Lê o `UsageStatsManager` e devolve `List<AppEntry>` em ordem de uso. |
+| `DismissedStore` | Pacote → instante em que foi dispensado. Mesmo padrão do `FavoritesStore`. |
 | `RecentListAdapter` | Adapter **novo**, só desta tela: nome + X por linha. |
 | `TaskKiller` | Interface de encerrar apps: um, ou todos. |
 | `ShizukuTaskKiller` | Implementação via Shizuku. Cuida também do caso "Shizuku parado". |
@@ -100,10 +142,20 @@ RecentAppsActivity.onResume()
        ├─ UsageStatsManager não concedido → lista vazia + dica
        ├─ queryUsageStats(MOVE_TO_FOREGROUND)
        ├─ ordena por lastTimeUsed desc
-       ├─ cruza com AppRepository.getAllApps() para achar o AppEntry
        ├─ deduplica por pacote (UsageStats tem um evento por task, não por app)
-       └─ descarta apps de sistema (X não teria o que fazer)
+       ├─ descarta o que tem dispensa mais recente que o lastTimeUsed
+       ├─ cruza com AppRepository.getAllApps() para achar o AppEntry
+       └─ anexa o X que aquele app permite
   └─ adapter.setItems(lista)
+
+toque no X de uma linha
+  ├─ DismissedStore.dismiss(pacote, agora)
+  ├─ TaskKiller.kill(pacote)          ← melhor esforço, pode não existir efeito
+  └─ adapter.removeItem(posição)
+
+toque no "limpar tudo"
+  ├─ TaskKiller.killAll(todos da lista)  ← melhor esforço
+  └─ DismissedStore.clear()
 ```
 
 A consulta acontece na **fila única do `AppRepository`** (`WORKER`), nunca na
@@ -189,7 +241,13 @@ quando o RecyclerView popula.
 
 O "limpar tudo" é **a última linha da lista**, sem X, com o mesmo `AppNameText`.
 Sem cor de destaque, sem background próprio. Distinto das linhas de apps só pelo
-rótulo. Tocar encerra todos os apps da lista.
+rótulo.
+
+Ele não tem X pela mesma razão que apps de sistema também não deveriam ter um
+X que não faz nada: o X é "sair da lista", e o "limpar tudo" **já é** sair da
+lista inteira. Um X nele repetiria o próprio rótulo.
+
+Tocar esvazia a tela e tenta encerrar tudo que estiver em segundo plano.
 
 A tela não tem título. `SearchActivity` e `SettingsActivity` têm título porque
 são telas de consulta; esta é uma lista, como a tela inicial, e a tela inicial
@@ -202,17 +260,11 @@ botão voltar do sistema também funciona.
 
 ## Encerrar apps, e o que acontece sem Shizuku
 
-O X **sempre** aparece e **sempre** significa "encerrar este app". Não há
-variação de layout conforme a configuração — a tela não muda de cara porque o
-Shizuku está ou não ligado.
+O X **sempre** aparece e **sempre** tira o app da lista. Encerrar é o que ele
+tenta fazer por baixo, e é o que pode não acontecer.
 
-Quando o Shizuku não está disponível, o toque no X mostra uma linha de texto
-explicando que o Shizuku precisa estar rodando. É o comportamento honesto:
-não esconde o botão, não finge que encerrou, e não faz a lista mudar de
-aparência. O mesmo vale para o "limpar tudo".
-
-`TaskKiller` cobre duas granularidades, porque encerrar um app e encerrar
-todos não são o mesmo trabalho:
+`TaskKiller` cobre duas granularidades, porque encerrar um app e encerrar todos
+não são o mesmo trabalho:
 
 ```java
 public interface TaskKiller {
@@ -223,10 +275,22 @@ public interface TaskKiller {
 ```
 
 `ShizukuTaskKiller` implementa as duas com `am force-stop` por pacote, e remove
-as tasks. `isAvailable()` responde se o binder foi adquirido. Nenhuma chamada
-lança: falha do Shizuku é um estado esperado, não uma exceção — e o app já
-trata exceção como caminho normal em `AppEntry.launch()` e
-`AppRepository.rankQuietly()`.
+as tasks. `isAvailable()` responde se o binder foi adquirido.
+
+Nenhuma chamada lança, e **nenhum retorno é tratado como erro pelo X**:
+encerrar app de sistema com `force-stop` não é uma falha, é o resultado
+esperado, e a linha sai da lista do mesmo jeito. Falha do Shizuku também é
+estado esperado, não exceção — o app já trata exceção como caminho normal em
+`AppEntry.launch()` e `AppRepository.rankQuietly()`.
+
+Consequência do "X = sair da lista": **sem Shizuku a tela continua limpa**. O
+que não acontece é o app ser encerrado, e o usuário não tem como saber disso
+pela lista, porque ela esvaziou igual. Isso é aceitável numa tela de uso pessoal
+e é o preço de um X com um significado só.
+
+Apps de sistema levam o mesmo X das outros. O que muda é que neles o
+encerramento não tem efeito — e é por isso que a lista não promete nada além
+de "sai daqui".
 
 Dependências, ambas no Maven Central:
 
@@ -273,15 +337,22 @@ mudança não a toca. A verificação é manual, no dispositivo:
 3. Tocar no nome abre o app certo, inclusive quando há várias tasks do mesmo app.
 4. Tocar no nome **não** toca por alto o X: o ripple acende só o X.
 5. Nome longo corta com reticências e o X não sai da linha.
-6. Com Shizuku rodando: o X encerra o app — confirmado pelo `ps` ou pelo
+6. O X **persiste**: dispensado o app, ele não volta na próxima vez que a tela
+   abre pelo atalho. Sem persistência aqui, a tela não limpa nada.
+7. Abrir o app de novo depois de dispensá-lo traz ele de volta para a lista, sem
+   nenhuma ação do usuário. É o comportamento que o histórico manda, e é o que
+   impede o "limpar tudo" de virar apagão permanente.
+8. Com Shizuku rodando: o X encerra o app — confirmado pelo `ps` ou pelo
    `dumpsys`, não só pela linha sumindo.
-7. Sem Shizuku: o X mostra a linha explicando, o layout não muda, o app não
-   crasha.
-8. "Limpar tudo" encerra todos os apps da lista e esvazia a tela.
-9. Apps de sistema aparecem na lista **sem** X.
-10. Mão dominante invertida: nomes e X trocam de lado em bloco.
-11. A tela **não** aparece na busca nem na lista de apps.
-12. Ajustes de fonte e cor continuam valendo aqui: trocar o combo na tela de
+9. Sem Shizuku: a linha some do mesmo jeito, o layout não muda, o app não
+   crasha. A diferença é só que o processo continua vivo.
+10. App de sistema (relógio, telefone): tem X, a linha sai, o processo
+    continua rodando. Comprovado no `ps`.
+11. "Limpar tudo" esvazia a tela inteira, incluindo os apps de sistema, e a
+    lista continua vazia ao reabrir.
+12. Mão dominante invertida: nomes e X trocam de lado em bloco.
+13. A tela **não** aparece na busca nem na lista de apps.
+14. Ajustes de fonte e cor continuam valendo aqui: trocar o combo na tela de
     configurações muda esta tela também.
 
 ## Fora do escopo
@@ -291,7 +362,8 @@ mudança não a toca. A verificação é manual, no dispositivo:
 - **Interceptar o gesto de recents.** É a alternativa real ao atalho, e está
   fora por causa do piscar do sistema e da fragilidade em atualização de ROM —
   não por ser impossível.
-- **Encerrar apps de sistema.** Nem com Shizuku. Por isso essas linhas não têm X.
+- **Encerrar apps de sistema.** Nem com Shizuku. O X existe nessas linhas do
+  mesmo jeito, e sai da lista; só o encerramento não acontece.
 - **Rastrear histórico próprio do launcher.** Descartado: é superficial
   (perde tudo que não passou pelo launcher) e o `UsageStats` resolve melhor, com
   uma permissão a mais que o usuário não nota.
