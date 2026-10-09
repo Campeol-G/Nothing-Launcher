@@ -7,6 +7,15 @@
         android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
 
+    <!--
+      Acesso à API do Shizuku, em nível normal. É o app que pede permissão ao
+      Shizuku, não o servidor.
+
+      Esta permissão NÃO é a que protege o provider abaixo: ela é a que o nosso
+      app precisa ter para poder pedir consentimento.
+    -->
+    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
+
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
@@ -97,8 +106,15 @@
             android:windowSoftInputMode="adjustNothing" />
 
         <!--
-          Shizuku: o provider é o que adquire o binder. Declarado pelo artefato
-          dev.rikka.shizuku:provider, com a permissão que ele exige.
+          Shizuku: o provider é o que adquire o binder. Declarado à mão porque o
+          artefato dev.rikka.shizuku:provider não o declara no manifesto dele.
+
+          A permissão deste provider NÃO é a API_V23. Tem que ser
+          INTERACT_ACROSS_USERS_FULL, e a diferença não é decorativa: é o próprio
+          shizuku_server, que roda com identidade de shell, que precisa abrir este
+          provider para falar com o gerenciador e mostrar o diálogo de consentimento.
+          Com API_V23 aqui, o shell não tem a permissão e a abertura é negada com
+          "Permission Denial", e o consentimento nunca chega a aparecer.
         -->
         <provider
             android:name="rikka.shizuku.ShizukuProvider"
@@ -106,7 +122,8 @@
             android:enabled="true"
             android:exported="true"
             android:multiprocess="false"
-            android:permission="moe.shizuku.manager.permission.API_V23" />
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL"
+            tools:replace="android:permission" />
     </application>
 
 </manifest>

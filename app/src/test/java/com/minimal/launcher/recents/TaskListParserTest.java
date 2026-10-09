@@ -105,4 +105,45 @@ public class TaskListParserTest {
         assertEquals(Collections.singletonList("com.y"),
                 TaskListParser.launchablePackages(semComponente));
     }
+
+    @Test public void launcherEmTaskStandardNaoEntra() {
+        // Reproduz o aparelho: o launcher tem DUAS tasks. Uma e type=home, que o
+        // filtro por tipo pega. A outra e type=standard — a task do processo do
+        // app, que o sistema abre como qualquer outro quando o launcher esta em
+        // primeiro plano. Sem excluir pelo pacote, ela aparecia na primeira linha.
+        String comLauncher = "  * Recent #0: Task{a #1 type=standard A=10279:com.minimal.launcher"
+                + " U=0 visible=true}\n"
+                + "    mActivityComponent=com.minimal.launcher/.HomeActivity\n"
+                + "  * Recent #1: Task{b #2 type=standard A=10350:com.discord U=0}\n"
+                + "    mActivityComponent=com.discord/.main.MainActivity\n"
+                + "  * Recent #2: Task{c #3 type=home A=10280:com.sec.android.app.launcher U=0}\n"
+                + "    mActivityComponent=com.sec.android.app.launcher/.Home\n";
+        assertEquals(Collections.singletonList("com.discord"),
+                TaskListParser.launchablePackages(comLauncher));
+    }
+
+    @Test public void taskSemComponenteComLinhasQueComecamComM() {
+        // Reproduz o crash do aparelho: uma task real tem linhas como
+        // "mCallingPackage=", que comecam com "m" e nao tem componente nem
+        // intent. O fallback chamava valueAfter com null e derrubava a tela
+        // inteira com NPE -- a lista sumia sem nenhuma explicacao.
+        String realista = "  * Recent #0: Task{a #1 type=standard A=1:com.x U=0}\n"
+                + "    userId=0 effectiveUid=u0a1 mCallingUid=2000 mCallingPackage=com.android.shell\n"
+                + "    affinity=1:com.x\n"
+                + "  * Recent #1: Task{b #2 type=standard A=2:com.y U=0}\n"
+                + "    mActivityComponent=com.y/.Main\n"
+                + "  * Recent #2: Task{c #3 type=home A=3:com.z U=0}\n"
+                + "    mActivityComponent=com.z/.Home\n";
+        assertEquals(Collections.singletonList("com.y"),
+                TaskListParser.launchablePackages(realista));
+    }
+
+    @Test public void blocoSemComponenteMasComIntentAindaEntra() {
+        // O fallback pelo intent tem que continuar funcionando: nem toda task
+        // traz mActivityComponent, e o intent traz o mesmo componente.
+        String soIntent = "  * Recent #0: Task{a #1 type=standard A=1:com.x U=0}\n"
+                + "    intent={act=android.intent.action.MAIN cmp=com.x/.Main flg=0x10200000}\n";
+        assertEquals(Collections.singletonList("com.x"),
+                TaskListParser.launchablePackages(soIntent));
+    }
 }

@@ -38,6 +38,8 @@ final class TaskListParser {
     private static final Set<String> NON_APP_TASK_TYPES = Set.of("home", "recents");
 
     private static final String BLOCK_PREFIX = "* Recent #";
+    /** Launcher de qualquer papel: não é app que a pessoa abriu. */
+    private static final String OUR_PACKAGE = "com.minimal.launcher";
     private static final String TYPE_KEY = "type=";
     private static final String COMPONENT_KEY = "mActivityComponent=";
     private static final String COMPONENT_FALLBACK_KEY = "cmp=";
@@ -50,8 +52,14 @@ final class TaskListParser {
      *
      * <p>Launcher e a própria tela de recents saem fora porque chegam com
      * {@code type=home} e {@code type=recents}: são o lugar de onde a pessoa veio,
-     * não um app que ela abriu. Isso é o mesmo filtro que a tela de recents do
-     * sistema faz, e é o que garante que o launcher nunca apareça na própria lista.
+     * não um app que ela abriu. É o mesmo filtro que a tela de recents do sistema
+     * faz.
+     *
+     * <p>Um detalhe que o filtro por tipo não pega, e que só aparece no aparelho:
+     * o launcher também tem uma task {@code type=standard} própria, separada da
+     * {@code type=home} — a task do processo do app, que o sistema abre como
+     * qualquer outro quando o launcher está em primeiro plano. Sem a exclusão pelo
+     * pacote, o launcher aparecia na própria lista, na primeira linha.
      *
      * <p>Pacote repetido aparece uma vez só, na posição da task mais recente.
      *
@@ -76,7 +84,16 @@ final class TaskListParser {
                 insideBlock = true;
                 continue;
             }
-            if (!insideBlock || trimmed.isEmpty() || !trimmed.startsWith("m")) {
+            if (!insideBlock || trimmed.isEmpty()) {
+                continue;
+            }
+            // Só duas linhas importam aqui: a do componente e a do intent. O
+            // filtro é por conteúdo e não por primeira letra: a linha do intent
+            // começa com "i", e um beginsWith("m") a descartava antes do fallback
+            // ter chance de rodar.
+            boolean componentLine = trimmed.contains(COMPONENT_KEY);
+            boolean intentLine = trimmed.startsWith("intent=");
+            if (!componentLine && !intentLine) {
                 continue;
             }
 
@@ -86,7 +103,9 @@ final class TaskListParser {
                 // reserva para o caso de o bloco não ter a linha de componente.
                 packageName = packageOf(valueAfter(intentOf(line), COMPONENT_FALLBACK_KEY));
             }
-            if (packageName == null || NON_APP_TASK_TYPES.contains(type)) {
+            if (packageName == null
+                    || NON_APP_TASK_TYPES.contains(type)
+                    || OUR_PACKAGE.equals(packageName)) {
                 continue;
             }
             packages.add(packageName);
@@ -105,9 +124,19 @@ final class TaskListParser {
         return close < 0 ? null : line.substring(open, close);
     }
 
-    /** O primeiro valor de {@code key} na linha, cortado no espaço. */
+    /**
+     * O primeiro valor de {@code key} na linha, cortado no espaço.
+     *
+     * <p>Tolerante a linha nula porque o fallback do componente vem de um bloco
+     * sem linha de intent — e uma task qualquer tem linhas como
+     * {@code mCallingPackage=}, que começam com "m" e não têm componente nem
+     * intent. Sem esta guarda, uma task real derrubava a tela inteira.
+     */
     @Nullable
-    private static String valueAfter(@NonNull String line, @NonNull String key) {
+    private static String valueAfter(@Nullable String line, @NonNull String key) {
+        if (line == null) {
+            return null;
+        }
         int at = line.indexOf(key);
         if (at < 0) {
             return null;
