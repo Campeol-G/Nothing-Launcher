@@ -40,4 +40,8 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.8.0'
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
     implementation 'androidx.core:core:1.19.1'
+
+    // RecentRanker e a unica regra da tela de recentes que falha em silencio:
+    // um >= trocado por > esvazia a lista sem deixar rastro em log nenhum.
+    testImplementation 'junit:junit:4.13.2'
 }
