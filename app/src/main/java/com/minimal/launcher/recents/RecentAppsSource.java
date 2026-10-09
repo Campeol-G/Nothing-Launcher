@@ -1,9 +1,12 @@
 package com.minimal.launcher.recents;
 
 import android.app.usage.UsageStats;
+import android.app.AppOpsManager;
 import android.app.usage.UsageEvents;
 import android.app.usage.UsageStatsManager;
 import android.content.Context;
+import android.os.Build;
+import android.os.Process;
 
 import androidx.annotation.NonNull;
 
@@ -22,10 +25,11 @@ import java.util.List;
  * link ou por outro launcher aparece aqui, e não apareceria no outro caminho — que é
  * justamente a lista que o usuário esperava ver.
  *
- * <p>O {@code UsageStatsManager} só devolve uso de qualquer app depois que o usuário
- * liga a permissão de acesso a dados de uso nas configurações. Sem isso ele lança
- * {@link SecurityException}, e isso é um estado esperado: a tela mostra como
- * conseguir a permissão, em vez de ficar vazia sem explicação.
+ * <p>A permissão de acesso a dados de uso é um app-op, não uma permissão de runtime:
+ * não existe diálogo, o usuário liga em Configurações. E o sistema não avisa que
+ * faltou — sem a permissão, {@code queryUsageStats} devolve lista vazia e segue
+ * vivo. Por isso a checagem é feita antes, e é explícita: sem ela a tela ficaria
+ * vazia sem nenhuma explicação, que é o pior resultado possível.
  */
 public final class RecentAppsSource {
 
@@ -73,6 +77,47 @@ public final class RecentAppsSource {
     }
 
     /**
+     * O app-op que decide se a tela pode ler uso de apps.
+     *
+     * <p>Este é o valor de {@code AppOpsManager.OPSTR_GET_USAGE_STATS}. A constante
+     * é pública nesta API, mas o nome do app-op é mais estável que qualquer
+     * constante: ele é o que fica no {@code dumpsys}, e é assim que se conferiu
+     * que a permissão estava negada no aparelho.
+     */
+    private static final String OPSTR_USAGE_STATS = "android:get_usage_stats";
+
+    /**
+     * O usuário deu acesso a dados de uso?
+     *
+     * <p>Só {@code MODE_ALLOWED} conta. Modo {@code default} é "ninguém se
+     * manifestou", que na prática é o mesmo que não ter — e a tela precisa dizer
+     * como conseguir, não ficar vazia.
+     */
+    private static boolean hasUsagePermission(@NonNull Context context) {
+        try {
+            AppOpsManager ops = context.getSystemService(AppOpsManager.class);
+            if (ops == null) {
+                return false;
+            }
+            int mode;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                mode = ops.unsafeCheckOpNoThrow(
+                        OPSTR_USAGE_STATS, Process.myUid(), context.getPackageName());
+            } else {
+                // Antes do Q só existe checkOpNoThrow. A diferença é que ele pode
+                // lançar, mas é o mesmo app-op e a mesma resposta.
+                mode = ops.checkOpNoThrow(
+                        OPSTR_USAGE_STATS, Process.myUid(), context.getPackageName());
+            }
+            return mode == AppOpsManager.MODE_ALLOWED;
+        } catch (RuntimeException e) {
+            // Sem serviço de app-ops não há como saber: tratar como não concedido
+            // e a tela explicar é melhor do que fingir que a lista está vazia.
+            return false;
+        }
+    }
+
+    /**
      * Lê, ordena, dispensa e cruza. Tudo na fila, nada na main thread.
      *
      * <p>Ler os apps instalados custa meio segundo, e foi exatamente na main thread
@@ -81,6 +126,10 @@ public final class RecentAppsSource {
      */
     @NonNull
     private static Result read(@NonNull Context context) {
+        if (!hasUsagePermission(context)) {
+            return new Result(new ArrayList<>(), true);
+        }
+
         List<UsageStats> stats;
         try {
             UsageStatsManager usage = context.getSystemService(UsageStatsManager.class);
