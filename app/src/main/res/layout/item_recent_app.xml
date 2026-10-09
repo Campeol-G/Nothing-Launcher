@@ -1,18 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Uma linha da tela de apps recentes: o nome e o X que tira o app de lá.
+  Uma linha da tela de apps recentes: o nome de um lado, o X na outra ponta.
 
-  O nome tem weight=1 e ellipsize=end para que um nome comprido corte em vez
-  de empurrar o X para fora da linha.
+  O nome e o X ficam em extremos opostos de propósito. Com eles juntos, o dedo
+  tinha que acertar o nome exato para abrir o app e o X para fechar; separados,
+  a área inteira entre eles serve para abrir, e o X é um alvo fixo que o polegar
+  acha sem olhar.
 
-  O X é um glifo, não um ícone: um caractere na fonte de interface, sem
-  drawable. Os 14dp de padding em volta dele são o que dá a área de toque de
-  48dp sem que o "×" fique enorme — o glifo sozinho tem umas 20dp.
+  O nome tem weight=1 e o X é fixo: é o que faz o nome encostar na ponta
+  contrária e o X ficar sempre na mesma coluna, para a lista inteira.
 
-  O X tem selectableItemBackground próprio, e o ripple é só dele: tocar no X
-  acende o X, tocar no nome acende a linha. É a diferença entre "encerrei
-  este" e "abri este", e se dividissem o mesmo fundo o toque no X pareceria
-  que abriu o app.
+  A linha é alta (o padding é do AppNameText) e o nome tem tamanho grande, porque
+  a tela fica muito vazia se as linhas forem curtas e miúdas.
+
+  O X é um glifo, não um ícone: um caractere na fonte de interface, sem drawable.
+  Os 14dp de padding em volta dele são o que dá a área de toque de 48dp sem que
+  o "×" fique enorme — o glifo sozinho tem umas 20dp.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -25,15 +28,19 @@
 
     <TextView
         android:id="@+id/recent_app_name"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:ellipsize="end"
         android:includeFontPadding="false"
         android:maxLines="1"
         android:singleLine="true"
-        android:textSize="@dimen/app_name_size" />
+        android:textSize="@dimen/recent_app_name_size" />
 
+    <!--
+      O X é o único filho que responde a clique aqui: a área útil da linha, que é
+      o nome e o espaço entre ele e o X, abre o app.
+    -->
     <TextView
         android:id="@+id/recent_app_dismiss"
         android:layout_width="wrap_content"
@@ -48,6 +55,7 @@
         android:paddingEnd="14dp"
         android:paddingTop="14dp"
         android:paddingBottom="14dp"
-        android:text="@string/recent_dismiss" />
+        android:text="@string/recent_dismiss"
+        android:textSize="@dimen/recent_dismiss_size" />
 
 </LinearLayout>

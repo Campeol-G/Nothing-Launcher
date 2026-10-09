@@ -46,23 +46,7 @@ public final class RecentListAdapter extends RecyclerView.Adapter<RecentListAdap
 
         /** Toque no X: tirar o app da lista. */
         void onDismiss(@NonNull AppEntry entry, int position);
-
-        /** Toque no "limpar tudo". */
-        void onClearAll();
     }
-
-    /**
-     * Componente do botão "limpar tudo", que é a última linha.
-     *
-     * <p>Ele é um {@link AppEntry} sintético com este componente, e nenhum app real
-     * o tem. Comparar o componente é o que impede o adapter de tentar abrir um app
-     * nele: sem isso o toque cairia em {@code AppEntry.launch()}, que cai no
-     * fallback por pacote e abriria o app errado em vez de não fazer nada.
-     *
-     * <p>É a única linha sem X, e o motivo é o mesmo que faz o botão existir sem
-     * X: ele já É sair da lista inteira, então o X repetiria o próprio rótulo.
-     */
-    public static final String CLEAR_ALL_COMPONENT = "minimal.launcher/CLEAR_ALL";
 
     private final List<AppEntry> items = new ArrayList<>();
     @Nullable
@@ -70,9 +54,11 @@ public final class RecentListAdapter extends RecyclerView.Adapter<RecentListAdap
     private final float baseTextSizePx;
     private final float fontScale;
     private final int textColor;
+    private final int paddingPx;
+    private final float dismissTextSizePx;
 
     private int textGravity;
-    /** O X fica do lado para onde os nomes encostam, e não no lado oposto. */
+    /** O X fica na ponta, e o nome encosta na ponta oposta. */
     private boolean dismissOnEnd;
 
     public RecentListAdapter(@NonNull Context context,
@@ -82,13 +68,17 @@ public final class RecentListAdapter extends RecyclerView.Adapter<RecentListAdap
         items.addAll(source);
 
         Prefs prefs = new Prefs(context);
-        // Mão direita: nomes encostam na direita, e o X logo ao lado deles, na
-        // direita. Mão esquerda, o inverso. O X fica do lado dos apps para que
-        // os dois fiquem juntos e o alcance com uma mão só funcione.
+        // Mão direita: nomes encostam na esquerda e o X fica na ponta direita.
+        // São opostos de propósito — juntos, o dedo tinha que acertar o nome
+        // exato para abrir e o X para fechar; separados, a área entre eles toda
+        // abre o app e o X vira um alvo fixo.
         this.dismissOnEnd = Prefs.ALIGN_RIGHT.equals(prefs.getDominantHand());
-        this.textGravity = dismissOnEnd ? Gravity.END : Gravity.START;
+        // O nome encosta na ponta OPOSTA ao X.
+        this.textGravity = dismissOnEnd ? Gravity.START : Gravity.END;
         this.fontScale = LauncherUtils.getFontScale(context);
-        this.baseTextSizePx = context.getResources().getDimension(R.dimen.app_name_size);
+        this.paddingPx = context.getResources().getDimensionPixelSize(R.dimen.recent_row_padding);
+        this.dismissTextSizePx = context.getResources().getDimension(R.dimen.recent_dismiss_size);
+        this.baseTextSizePx = context.getResources().getDimension(R.dimen.recent_app_name_size);
         // A cor vem aqui, e não de ThemeHelper.paint(): as linhas nascem quando
         // o RecyclerView popula, depois de qualquer pintura da árvore.
         this.textColor = ThemeHelper.getHomeForegroundColor(context);
@@ -125,18 +115,16 @@ public final class RecentListAdapter extends RecyclerView.Adapter<RecentListAdap
 
         name.setText(entry.label);
         name.setTextSize(TypedValue.COMPLEX_UNIT_PX, baseTextSizePx * fontScale);
+        name.setPadding(0, paddingPx, 0, paddingPx);
         name.setGravity(textGravity);
         name.setTextColor(textColor);
         name.setTypeface(FontCombo.getInterfaceFont(name.getContext()));
 
-        boolean isClearAll = CLEAR_ALL_COMPONENT.equals(entry.component);
-        if (isClearAll) {
-            dismiss.setVisibility(View.GONE);
-        } else {
+        {
             dismiss.setVisibility(View.VISIBLE);
             // O X é informação secundária: recua sem sumir, o mesmo 0.7 que as
             // configurações usam para o valor atual de uma opção.
-            dismiss.setTextSize(TypedValue.COMPLEX_UNIT_PX, baseTextSizePx * fontScale);
+            dismiss.setTextSize(TypedValue.COMPLEX_UNIT_PX, dismissTextSizePx * fontScale);
             dismiss.setTextColor(textColor);
             dismiss.setTypeface(FontCombo.getInterfaceFont(dismiss.getContext()));
             dismiss.setAlpha(0.7f);
@@ -159,12 +147,7 @@ public final class RecentListAdapter extends RecyclerView.Adapter<RecentListAdap
         // o polegar não tem. O X consome o toque dele porque é clicável e fica
         // por cima do listener da linha.
         holder.row.setOnClickListener(v -> {
-            if (callback == null) {
-                return;
-            }
-            if (isClearAll) {
-                callback.onClearAll();
-            } else {
+            if (callback != null) {
                 callback.onAppClick(entry);
             }
         });

@@ -2,6 +2,7 @@ package com.minimal.launcher.recents;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.TypedValue;
 import android.provider.Settings;
 import android.view.View;
 
@@ -13,6 +14,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.minimal.launcher.EdgeGestureLayout;
 import com.minimal.launcher.FontCombo;
+import com.minimal.launcher.LauncherUtils;
 import com.minimal.launcher.R;
 import com.minimal.launcher.ThemeHelper;
 import com.minimal.launcher.apps.AppEntry;
@@ -56,6 +58,7 @@ public final class RecentAppsActivity extends AppCompatActivity
 
     private RecyclerView list;
     private TextView hint;
+    private TextView clearAll;
     private RecentListAdapter adapter;
 
     /**
@@ -83,6 +86,7 @@ public final class RecentAppsActivity extends AppCompatActivity
         EdgeGestureLayout root = findViewById(R.id.root);
         list = findViewById(R.id.recent_apps_list);
         hint = findViewById(R.id.recent_hint);
+        clearAll = findViewById(R.id.recent_clear_all);
         dismissedStore = new DismissedStore(this);
         killer = new ShizukuTaskKiller(getPackageName());
 
@@ -96,10 +100,22 @@ public final class RecentAppsActivity extends AppCompatActivity
         list.setLayoutManager(new LinearLayoutManager(this));
         list.setAdapter(adapter = new RecentListAdapter(this, new ArrayList<>(), this));
 
-        // A linha do pé é o mesmo estilo das linhas de apps, então precisa do
+        // O pé e a dica usam o mesmo estilo das linhas de apps, então precisam do
         // mesmo tratamento: fonte e cor em runtime, como o adapter faz.
-        hint.setTypeface(FontCombo.getInterfaceFont(this));
-        hint.setTextColor(ThemeHelper.getHomeForegroundColor(this));
+        int foreground = ThemeHelper.getHomeForegroundColor(this);
+        float scale = LauncherUtils.getFontScale(this);
+        for (TextView footer : new TextView[]{clearAll, hint}) {
+            footer.setTypeface(FontCombo.getInterfaceFont(this));
+            footer.setTextColor(foreground);
+        }
+        clearAll.setTextSize(TypedValue.COMPLEX_UNIT_PX,
+                getResources().getDimension(R.dimen.recent_clear_all_size) * scale);
+        hint.setTextSize(TypedValue.COMPLEX_UNIT_PX,
+                getResources().getDimension(R.dimen.recent_hint_size) * scale);
+
+        // O "Limpar tudo" é uma view fixa, e não uma linha: fica no mesmo lugar
+        // sempre, com a mesma área de toque, sem depender de rolagem.
+        clearAll.setOnClickListener(v -> onClearAll());
     }
 
     @Override
@@ -135,21 +151,23 @@ public final class RecentAppsActivity extends AppCompatActivity
             shown.clear();
             adapter.setItems(new ArrayList<>());
             list.setVisibility(View.GONE);
+            clearAll.setVisibility(View.GONE);
             showHint(R.string.recent_shizuku_required, this::openShizuku);
             return;
         }
+        clearAll.setVisibility(View.VISIBLE);
         shown.clear();
         shown.addAll(entries);
         publish();
     }
 
     private void publish() {
-        List<AppEntry> rows = new ArrayList<>(shown);
-        rows.add(clearAllEntry());
-        adapter.setItems(rows);
+        // A lista não tem mais a linha do "Limpar tudo": ele é uma view fixa no
+        // pé, e ela existe para a lista poder rolar por cima.
+        adapter.setItems(shown);
         list.setVisibility(View.VISIBLE);
-        // Lista vazia é estado real: nada usado na janela. E ela não é acionável,
-        // então não finge ser botão.
+        // Lista vazia é estado real: nada aberto. E ela não é acionável, então não
+        // finge ser botão.
         if (shown.isEmpty()) {
             showHint(R.string.recent_empty, null);
         } else {
@@ -194,13 +212,6 @@ public final class RecentAppsActivity extends AppCompatActivity
         }
     }
 
-    /** O botão do fim: um AppEntry com um componente que nenhum app real tem. */
-    @NonNull
-    private AppEntry clearAllEntry() {
-        return new AppEntry("", getString(R.string.recent_clear_all),
-                RecentListAdapter.CLEAR_ALL_COMPONENT);
-    }
-
     // -------------------------------------------------------------- toques
 
     @Override
@@ -222,7 +233,7 @@ public final class RecentAppsActivity extends AppCompatActivity
         killOffMainThread(() -> killer.kill(entry.packageName));
     }
 
-    @Override
+    /** O pé da tela chama isto. Não vem do adapter: o botão saiu da lista. */
     public void onClearAll() {
         List<String> packages = new ArrayList<>(shown.size());
         for (AppEntry entry : shown) {

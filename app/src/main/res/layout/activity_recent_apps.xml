@@ -1,15 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Tela de apps recentes: a lista, e uma linha de texto no pé.
+  Tela de apps recentes: a lista rola, e o "Limpar tudo" fica parado no pé.
+
+  O botão fica FORA do RecyclerView de propósito. Dentro dele, ele seria a última
+  linha e sumiria junto com a rolagem — e é justamente o que se quer é o
+  contrário: um alvo fixo, sempre no mesmo lugar, sempre com o mesmo tamanho de
+  toque, sem ter que rolar até o fim da lista para achar.
+
+  A lista tem peso=1 e o pé não: a lista ocupa o que sobra e rola por cima do pé.
 
   Sem cabeçalho, de propósito. A busca e as configurações têm título porque são
   telas de consulta; esta é uma lista, como a tela inicial, e a tela inicial não
-  tem. O padding superior de clock_list_gap é o mesmo respiro que separa o
-  relógio da lista lá em cima, então a primeira linha não gruda no status bar.
-
-  A linha do pé (recent_hint) é o mesmo estilo AppNameText das outras linhas, e
-  serve para os três estados que não são lista: falta a permissão de uso, não há
-  app recente, e Shizuku parado. Ela fica escondida na maioria do tempo.
+  tem. O padding superior é o mesmo respiro que separa o relógio da lista lá em
+  cima, então a primeira linha não gruda no status bar.
 -->
 <com.minimal.launcher.EdgeGestureLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/root"
@@ -30,13 +33,23 @@
             android:contentDescription="@string/recent_list_description"
             android:overScrollMode="never"
             android:paddingTop="@dimen/clock_list_gap"
+            android:paddingBottom="@dimen/recent_footer_padding"
             android:scrollbars="none" />
+
+        <TextView
+            android:id="@+id/recent_clear_all"
+            style="@style/AppNameText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/recent_clear_all"
+            android:textSize="@dimen/recent_clear_all_size" />
 
         <TextView
             android:id="@+id/recent_hint"
             style="@style/AppNameText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:textSize="@dimen/recent_hint_size"
             android:visibility="gone" />
 
     </LinearLayout>

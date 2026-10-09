@@ -21,6 +21,21 @@
     <!-- Folga entre o fim do bloco do relógio e o começo da lista. -->
     <dimen name="clock_list_gap">20dp</dimen>
     <dimen name="app_row_padding">10dp</dimen>
+
+    <!--
+      Tela de apps recentes: maior que a lista de favoritos, e com mais respiro.
+
+      A lista de apps abertos é curta e a tela é grande. Com o mesmo corpo da
+      lista de favoritos, sobraria metade da tela vazia. Estes dois tamanhos e o
+      padding da linha são o que preenchem a tela sem nada parecer um botão.
+    -->
+    <dimen name="recent_app_name_size">28sp</dimen>
+    <dimen name="recent_dismiss_size">20sp</dimen>
+    <dimen name="recent_row_padding">16dp</dimen>
+    <dimen name="recent_footer_padding">18dp</dimen>
+    <!-- O pé e a dica são texto de apoio: menores que o nome, que é o conteúdo. -->
+    <dimen name="recent_clear_all_size">17sp</dimen>
+    <dimen name="recent_hint_size">17sp</dimen>
     <dimen name="search_bar_top_margin">10dp</dimen>
     <dimen name="search_bar_inner_padding">14dp</dimen>
     <dimen name="search_more_top_padding">2dp</dimen>
