@@ -101,6 +101,30 @@ public final class AppRepository {
     }
 
     /**
+     * Enfileira trabalho na fila única e entrega o resultado na main thread.
+     *
+     * <p>Existe para quem precisar da fila sem ser a busca: a tela de recentes
+     * também monta lista em segundo plano, e o que ela não pode é criar uma fila
+     * própria — duas filas fariam a montagem da lista de apps e a leitura de uso
+     * competirem entre si, que é exatamente o que o comentário de {@link #WORKER}
+     * diz para evitar.
+     *
+     * <p>Se {@code background} lançar, {@code onMain} não é chamado e a exceção
+     * morre aqui. Uma falha de leitura não pode virar tela branca nem travar quem
+     * pediu.
+     */
+    public void executeAsync(@NonNull Runnable background, @NonNull Runnable onMain) {
+        WORKER.execute(() -> {
+            try {
+                background.run();
+            } catch (RuntimeException ignored) {
+                return;
+            }
+            MAIN.post(onMain);
+        });
+    }
+
+    /**
      * Busca assincrona: o resultado chega na main thread.
      *
      * <p>A leitura da lista acontece dentro da tarefa, entao quem chama nunca
