@@ -7,6 +7,18 @@
         android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
 
+    <!--
+      Acesso a dados de uso: a origem da lista de apps recentes.
+
+      Permissão de acesso especial, não de runtime — o Android não mostra diálogo
+      para ela. O usuário liga em Configurações → Aplicativos → Minimal Launcher
+      → Uso de dados → Acesso a dados de uso, e a tela da lista diz isso quando
+      falta. Sem ela a lista fica vazia, e nenhum crash.
+    -->
+    <uses-permission
+        android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
+
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
@@ -73,6 +85,38 @@
                 <action android:name="android.intent.action.APPLICATION_PREFERENCES" />
             </intent-filter>
         </activity>
+
+        <!-- ============================================================
+             Tela de apps recentes.
+
+             Sem CATEGORY_LAUNCHER, de propósito: é isso que a mantém fora da
+             lista de apps do launcher e da busca, já que as duas listam o que
+             tem essa categoria. O atalho do sistema a alcança por intent
+             explícito, que não depende de filtro.
+
+             Não está com excludeFromRecents como as outras telas porque ela é
+             justamente a tela que substitui o recents na prática do usuário —
+             escondê-la de lá tiraria do gesto de voltar.
+             ============================================================ -->
+        <activity
+            android:name=".recents.RecentAppsActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.MinimalLauncher"
+            android:windowSoftInputMode="adjustNothing" />
+
+        <!--
+          Shizuku: o provider é o que adquire o binder. Declarado pelo artefato
+          dev.rikka.shizuku:provider, com a permissão que ele exige.
+        -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:enabled="true"
+            android:exported="true"
+            android:multiprocess="false"
+            android:permission="moe.shizuku.manager.permission.API_V23" />
     </application>
 
 </manifest>
