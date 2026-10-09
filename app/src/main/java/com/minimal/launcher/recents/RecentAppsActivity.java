@@ -16,6 +16,7 @@ import com.minimal.launcher.FontCombo;
 import com.minimal.launcher.R;
 import com.minimal.launcher.ThemeHelper;
 import com.minimal.launcher.apps.AppEntry;
+import com.minimal.launcher.apps.AppRepository;
 
 import android.widget.TextView;
 
@@ -48,13 +49,22 @@ public final class RecentAppsActivity extends AppCompatActivity
      * em inicializador de campo rodaria antes de o Context ser anexado à activity,
      * e {@code getApplicationContext()} devolveria null. Ele é criado no onCreate.
      */
-    private final TaskKiller killer = new ShizukuTaskKiller();
-
+    private TaskKiller killer;
     private DismissedStore dismissedStore;
 
     private RecyclerView list;
     private TextView hint;
     private RecentListAdapter adapter;
+
+    /**
+     * Qual leitura a tela está mostrando.
+     *
+     * <p>Cada {@code onResume} enfileira uma leitura, e elas se demoram. Sem este
+     * número, uma leitura antiga pode ser entregue depois do X e repor a linha que
+     * o usuário acabou de tirar — o botão pareceria não funcionar. É o mesmo
+     * cuidado que a busca faz com o número da consulta.
+     */
+    private int loadToken;
 
     /**
      * Os apps que a tela está mostrando, para o "limpar tudo" saber o que
@@ -72,6 +82,7 @@ public final class RecentAppsActivity extends AppCompatActivity
         list = findViewById(R.id.recent_apps_list);
         hint = findViewById(R.id.recent_hint);
         dismissedStore = new DismissedStore(this);
+        killer = new ShizukuTaskKiller(getPackageName());
 
         ThemeHelper.applyInsets(this, root, 26, 30, 18);
         ThemeHelper.applySystemBars(this);
@@ -88,7 +99,6 @@ public final class RecentAppsActivity extends AppCompatActivity
         hint.setTypeface(FontCombo.getInterfaceFont(this));
         hint.setTextColor(ThemeHelper.getHomeForegroundColor(this));
         hint.setAlpha(0.7f);
-        hint.setOnClickListener(v -> openUsageSettings());
     }
 
     @Override
@@ -96,7 +106,15 @@ public final class RecentAppsActivity extends AppCompatActivity
         super.onResume();
         // Reler a cada volta: a lista é do sistema, e o uso dos últimos minutos é
         // justamente o que muda enquanto a tela está fechada.
-        RecentAppsSource.loadAsync(this, this);
+        final int token = ++loadToken;
+        RecentAppsSource.loadAsync(this, (entries, permissionMissing) -> {
+            // Uma leitura que já não é a atual não repõe nada: senão ela traz de
+            // volta a linha que o X acabou de tirar, e o botão parece quebrado.
+            if (token != loadToken || isFinishing() || isDestroyed()) {
+                return;
+            }
+            onLoaded(entries, permissionMissing);
+        });
     }
 
     // -------------------------------------------------------------- lista
@@ -107,7 +125,12 @@ public final class RecentAppsActivity extends AppCompatActivity
             return;
         }
         if (permissionMissing) {
-            showHint(R.string.recent_usage_permission_hint);
+            // Sem permissão, a lista velha não vale nada: escondê-la, senão a
+            // pessoa lê "nada foi usado" e a instrução ao mesmo tempo.
+            shown.clear();
+            adapter.setItems(new ArrayList<>());
+            list.setVisibility(View.GONE);
+            showHint(R.string.recent_usage_permission_hint, true);
             return;
         }
         shown.clear();
@@ -120,16 +143,29 @@ public final class RecentAppsActivity extends AppCompatActivity
         rows.add(clearAllEntry());
         adapter.setItems(rows);
         list.setVisibility(View.VISIBLE);
-        hideHint();
+        // Lista vazia é estado real: nada usado na janela. E ela não é acionável,
+        // então não finge ser botão.
+        if (shown.isEmpty()) {
+            showHint(R.string.recent_empty, false);
+        } else {
+            hideHint();
+        }
     }
 
-    private void showHint(int text) {
+    /**
+     * @param actionable há algo a fazer? Então a linha abre algo. Uma linha só
+     *                   informativa não pode abrir a tela errada.
+     */
+    private void showHint(int text, boolean actionable) {
         hint.setText(text);
+        hint.setClickable(actionable);
+        hint.setOnClickListener(actionable ? v -> openUsageSettings() : null);
         hint.setVisibility(View.VISIBLE);
     }
 
     private void hideHint() {
         hint.setVisibility(View.GONE);
+        hint.setOnClickListener(null);
         list.setVisibility(View.VISIBLE);
     }
 
@@ -169,12 +205,9 @@ public final class RecentAppsActivity extends AppCompatActivity
         // vez que a tela abrir, e é ela que sobrevive à falta de Shizuku.
         // Encerrar é o que vem depois, e pode não acontecer.
         dismissedStore.dismiss(entry.packageName, System.currentTimeMillis());
-        killer.kill(entry.packageName);
         shown.remove(entry);
         adapter.removeAt(position);
-        if (!killer.isAvailable()) {
-            showHint(R.string.recent_shizuku_missing);
-        }
+        killOffMainThread(() -> killer.kill(entry.packageName));
     }
 
     @Override
@@ -183,12 +216,31 @@ public final class RecentAppsActivity extends AppCompatActivity
         for (AppEntry entry : shown) {
             packages.add(entry.packageName);
         }
-        killer.killAll(packages);
         dismissedStore.clear();
         shown.clear();
         publish();
-        if (!killer.isAvailable()) {
-            showHint(R.string.recent_shizuku_missing);
-        }
+        killOffMainThread(() -> killer.killAll(packages));
+    }
+
+    /**
+     * Encerrar fora da main thread.
+     *
+     * <p>{@code newProcess} do Shizuku é transação de binder bloqueante, e o
+     * "limpar tudo" faria uma por app. Na main thread isso é a tela congelada, e
+     * no X simples é a linha que demora a sair. A fila do {@link AppRepository} é
+     * a mesma que o resto da tela já usa, então nada compete com a leitura de uso.
+     *
+     * <p>Quem chama tira a linha <em>antes</em>: encerrar é o bônus, e a resposta
+     * visível não pode esperar por isso.
+     */
+    private void killOffMainThread(@NonNull Runnable kill) {
+        AppRepository.get(this).executeAsync(kill, () -> {
+            if (isFinishing() || isDestroyed()) {
+                return;
+            }
+            if (!killer.isAvailable()) {
+                showHint(R.string.recent_shizuku_missing, false);
+            }
+        });
     }
 }

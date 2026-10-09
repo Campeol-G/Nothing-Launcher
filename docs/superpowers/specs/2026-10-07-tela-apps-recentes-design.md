@@ -348,8 +348,10 @@ mudança não a toca. A verificação é manual, no dispositivo:
    crasha. A diferença é só que o processo continua vivo.
 10. App de sistema (relógio, telefone): tem X, a linha sai, o processo
     continua rodando. Comprovado no `ps`.
-11. "Limpar tudo" esvazia a tela inteira, incluindo os apps de sistema, e a
-    lista continua vazia ao reabrir.
+11. "Limpar tudo" esvazia a tela inteira, incluindo os apps de sistema. A lista
+    **volta** na abertura seguinte: nada fica dispensado e o histórico manda. É o
+    efeito colateral de a dispensa guardar o instante em vez de um flag, e é o que
+    evita que "limpar tudo" seja um apagão que o usuário não desfaz.
 12. Mão dominante invertida: nomes e X trocam de lado em bloco.
 13. A tela **não** aparece na busca nem na lista de apps.
 14. Ajustes de fonte e cor continuam valendo aqui: trocar o combo na tela de

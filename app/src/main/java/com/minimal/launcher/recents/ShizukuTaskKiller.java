@@ -46,17 +46,55 @@ public final class ShizukuTaskKiller implements TaskKiller {
      */
     private static final int PERMISSION = -1;
 
+    /** O pacote que esta classe nunca pode encerrar: o próprio launcher. */
+    @NonNull
+    private final String selfPackage;
+
     /** Já pedimos? A resposta do usuário é definitiva; repetir só incomoda. */
     private boolean permissionRequested;
 
+    /**
+     * @param selfPackage o pacote do próprio launcher, injetado. Entrar como
+     * parâmetro em vez de descobrir por dentro evita depender de
+     * {@code BuildConfig}, que este build nem gera.
+     */
+    public ShizukuTaskKiller(@NonNull String selfPackage) {
+        this.selfPackage = selfPackage;
+    }
+
+    /**
+     * Este pacote pode ser encerrado por esta classe?
+     *
+     * <p>Não o nosso. O launcher tem uso registrado, aparece na própria lista de
+     * recentes — normalmente na primeira linha, por ser o app mais recentemente
+     * usado — e sem esta guarda o X nele executa {@code am force-stop} no processo
+     * que está desenhando a tela: a tela morre no meio e o "limpar tudo" morre
+     * antes de limpar as dispensas.
+     *
+     * <p>Também é o que a spec já pedia, em uma frase: encerrar o que estiver em
+     * segundo plano. O launcher está em primeiro plano, então não entra.
+     */
+    static boolean canKill(@NonNull String packageName, @NonNull String selfPackage) {
+        return !packageName.isEmpty() && !packageName.equals(selfPackage);
+    }
+
     @Override
     public boolean isAvailable() {
-        return Shizuku.pingBinder()
-                && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED;
+        try {
+            return Shizuku.pingBinder()
+                    && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED;
+        } catch (RuntimeException noService) {
+            // checkSelfPermission passa por requireService(), que lança quando o
+            // binder ainda não chegou. Corrida de poucas instruções, mas real.
+            return false;
+        }
     }
 
     @Override
     public void kill(@NonNull String packageName) {
+        if (!canKill(packageName, selfPackage)) {
+            return;
+        }
         if (!Shizuku.pingBinder()) {
             return;
         }
