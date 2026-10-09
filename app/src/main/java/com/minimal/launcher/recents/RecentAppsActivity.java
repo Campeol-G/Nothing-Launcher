@@ -41,8 +41,16 @@ import java.util.List;
 public final class RecentAppsActivity extends AppCompatActivity
         implements RecentListAdapter.Callback, RecentAppsSource.Callback {
 
+    /**
+     * Não precisa de Context, então pode ser campo.
+     *
+     * <p>O {@link DismissedStore} é o contrário: {@code new DismissedStore(this)}
+     * em inicializador de campo rodaria antes de o Context ser anexado à activity,
+     * e {@code getApplicationContext()} devolveria null. Ele é criado no onCreate.
+     */
     private final TaskKiller killer = new ShizukuTaskKiller();
-    private final DismissedStore dismissedStore = new DismissedStore(this);
+
+    private DismissedStore dismissedStore;
 
     private RecyclerView list;
     private TextView hint;
@@ -63,6 +71,7 @@ public final class RecentAppsActivity extends AppCompatActivity
         EdgeGestureLayout root = findViewById(R.id.root);
         list = findViewById(R.id.recent_apps_list);
         hint = findViewById(R.id.recent_hint);
+        dismissedStore = new DismissedStore(this);
 
         ThemeHelper.applyInsets(this, root, 26, 30, 18);
         ThemeHelper.applySystemBars(this);
