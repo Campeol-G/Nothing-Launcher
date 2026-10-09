@@ -41,6 +41,11 @@ dependencies {
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
     implementation 'androidx.core:core:1.19.1'
 
+    // Shizuku: o X tenta encerrar o app por baixo. O provider e o que adquire o
+    // binder; a api sozinha nao conecta.
+    implementation 'dev.rikka.shizuku:api:13.1.5'
+    implementation 'dev.rikka.shizuku:provider:13.1.5'
+
     // RecentRanker e a unica regra da tela de recentes que falha em silencio:
     // um >= trocado por > esvazia a lista sem deixar rastro em log nenhum.
     testImplementation 'junit:junit:4.13.2'
