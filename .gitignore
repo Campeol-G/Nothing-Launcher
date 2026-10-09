@@ -17,3 +17,5 @@ captures/
 
 # Log de sessao de ferramenta
 session-ses_*.md
+# Workspace de execucao de plano
+.superpowers/
