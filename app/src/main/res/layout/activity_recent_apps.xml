@@ -36,11 +36,21 @@
             android:paddingBottom="@dimen/recent_footer_padding"
             android:scrollbars="none" />
 
+        <!--
+          Centralizado, e não alinhado com os nomes.
+
+          As linhas seguem a mao dominante, e o botao nao: se ficasse na mesma
+          ponta dos nomes, o dedo teria de mudar de lado para acertar a lista e o
+          botao. No meio ele fica a mesma distancia das duas pontas.
+        -->
         <TextView
             android:id="@+id/recent_clear_all"
             style="@style/AppNameText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:paddingTop="@dimen/recent_clear_all_top_padding"
+            android:paddingBottom="@dimen/recent_footer_padding"
             android:text="@string/recent_clear_all"
             android:textSize="@dimen/recent_clear_all_size" />
 

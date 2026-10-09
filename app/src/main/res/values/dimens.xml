@@ -33,8 +33,13 @@
     <dimen name="recent_dismiss_size">20sp</dimen>
     <dimen name="recent_row_padding">16dp</dimen>
     <dimen name="recent_footer_padding">18dp</dimen>
-    <!-- O pé e a dica são texto de apoio: menores que o nome, que é o conteúdo. -->
-    <dimen name="recent_clear_all_size">17sp</dimen>
+    <!--
+      O "Limpar tudo" tem o mesmo corpo do nome: menor que isso, um botão do
+      mesmo importance ao lado de linhas parecidas fica com cara de nota de rodapé.
+      A dica é texto de apoio e continua menor — ela informa, não convida a tocar.
+    -->
+    <dimen name="recent_clear_all_size">28sp</dimen>
+    <dimen name="recent_clear_all_top_padding">10dp</dimen>
     <dimen name="recent_hint_size">17sp</dimen>
     <dimen name="search_bar_top_margin">10dp</dimen>
     <dimen name="search_bar_inner_padding">14dp</dimen>

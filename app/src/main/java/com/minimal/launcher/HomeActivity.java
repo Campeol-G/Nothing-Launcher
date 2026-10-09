@@ -112,6 +112,13 @@ public final class HomeActivity extends AppCompatActivity
         root.setEdgeGesture(EdgeGestureLayout.DIRECTION_UP, favoritesList,
                 () -> startActivity(new Intent(this, SearchActivity.class)));
 
+        // O gesto horizontal abre a tela de apps recentes, na direcao dos apps: com
+        // a mao direita o arrasto corre da esquerda para a direita. Ele corre
+        // contra o gesto de voltar do sistema, que mora na mesma borda — aqui o
+        // lancador pode tomar a decisao, e voltar a partir da tela inicial nao
+        // perde nada.
+        LauncherUtils.bindRecentAppsGesture(root);
+
         // Toque longo na area vazia tambem abre a busca: e o caminho que nao
         // depende de acertar o comeco do arrasto.
         root.setOnLongClickListener(v -> {

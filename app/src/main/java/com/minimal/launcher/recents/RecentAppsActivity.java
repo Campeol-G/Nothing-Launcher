@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.minimal.launcher.EdgeGestureLayout;
 import com.minimal.launcher.FontCombo;
 import com.minimal.launcher.LauncherUtils;
+import com.minimal.launcher.Prefs;
 import com.minimal.launcher.R;
 import com.minimal.launcher.ThemeHelper;
 import com.minimal.launcher.apps.AppEntry;
@@ -54,6 +55,7 @@ public final class RecentAppsActivity extends AppCompatActivity
     private static final String SHIZUKU_PACKAGE = "moe.shizuku.privileged.api";
 
     private ShizukuTaskKiller killer;
+    private Prefs prefs;
     private DismissedStore dismissedStore;
 
     private RecyclerView list;
@@ -87,6 +89,7 @@ public final class RecentAppsActivity extends AppCompatActivity
         list = findViewById(R.id.recent_apps_list);
         hint = findViewById(R.id.recent_hint);
         clearAll = findViewById(R.id.recent_clear_all);
+        prefs = new Prefs(this);
         dismissedStore = new DismissedStore(this);
         killer = new ShizukuTaskKiller(getPackageName());
 
@@ -96,6 +99,17 @@ public final class RecentAppsActivity extends AppCompatActivity
 
         // Deslizar para baixo fecha, como na busca.
         root.setEdgeGesture(EdgeGestureLayout.DIRECTION_DOWN, null, this::finish);
+
+        // Aqui o gesto horizontal e reversivel: o mesmo arrasto que abriu a tela
+        // a fecha. Fora dela o gesto so abre, e fechar e pelo botao voltar.
+        // Inverter o sentido e a unica forma de o gesto ser o mesmo na entrada e
+        // na saida sem trocar o dedo de lado.
+        boolean appsOnRight = Prefs.ALIGN_RIGHT.equals(prefs.getDominantHand());
+        root.setSideGesture(
+                appsOnRight
+                        ? EdgeGestureLayout.DIRECTION_LEFT
+                        : EdgeGestureLayout.DIRECTION_RIGHT,
+                this::finish);
 
         list.setLayoutManager(new LinearLayoutManager(this));
         list.setAdapter(adapter = new RecentListAdapter(this, new ArrayList<>(), this));

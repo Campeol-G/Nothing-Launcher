@@ -134,6 +134,11 @@ public final class SearchActivity extends AppCompatActivity implements AppMenu.L
         // voltar do sistema e o Enter do teclado.
         root.setEdgeGesture(EdgeGestureLayout.DIRECTION_DOWN, null, this::finish);
 
+        // Na busca o gesto horizontal abre a tela de apps recentes. O custo: o
+        // arrasto que fecharia a busca indo para tras vira "abrir recentes". Fechar
+        // continua pelo botao voltar e pelo gesto de descer, que ja existem.
+        LauncherUtils.bindRecentAppsGesture(root);
+
         search.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {

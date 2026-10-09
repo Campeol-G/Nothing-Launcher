@@ -35,6 +35,20 @@ public class EdgeGestureLayout extends FrameLayout {
 
     public static final int DIRECTION_UP = 1;
     public static final int DIRECTION_DOWN = -1;
+    public static final int DIRECTION_LEFT = 2;
+    public static final int DIRECTION_RIGHT = -2;
+
+    /**
+     * Faixa lateral onde o gesto nasce.
+     *
+     * <p>48dp e o mesmo {@code SYSTEM_GESTURE_MARGIN_DP} que a app ja reserva para o
+     * gesto do sistema: larga o bastante para o dedo acertar com folga, estreita
+     * o bastante para nunca nascer em cima de um item da lista.
+     */
+    private static final int SIDE_BAND_DP = 48;
+
+    /** Percurso minimo antes do gesto valer, em dp. */
+    private static final int SIDE_MIN_TRAVEL_DP = 56;
 
     public interface OnEdgeGestureListener {
         void onEdgeGesture();
@@ -45,6 +59,34 @@ public class EdgeGestureLayout extends FrameLayout {
     private View scrollChild;
     @Nullable
     private OnEdgeGestureListener edgeListener;
+
+    /**
+     * O segundo braço: horizontal, independente do vertical.
+     *
+     * <p>São dois braços porque não competem entre si. O vertical exige
+     * {@code |dy| > |dx|} e o horizontal exige o contrário, então quem decide é o
+     * próprio arrasto. Com um braço só, o gesto de fechar a tela acabaria engolindo
+     * o de abrir a lista de recentes, ou o contrário — e o horizontal ainda teria
+     * de disputar com a rolagem da lista.
+     */
+    private int sideDirection;
+    @Nullable
+    private OnEdgeGestureListener sideListener;
+
+    /**
+     * Faixa lateral onde o gesto nasce. Fora dela o arrasto e da lista.
+     *
+     * <p>48dp e o mesmo {@code SYSTEM_GESTURE_MARGIN_DP} que a app ja reserva para
+     * o gesto do sistema: uma faixa larga o bastante para o dedo acertar com folga,
+     * estreita o bastante para nunca nascer em cima de um item da lista.
+     */
+    private int sideStartBandPx;
+
+    // Estado do gesto horizontal em andamento.
+    private boolean sideTracking;
+    private float sideTravel;
+    private float sideStartX;
+    private float sideStartY;
     @Nullable
     private Runnable doubleTapListener;
 
@@ -87,6 +129,7 @@ public class EdgeGestureLayout extends FrameLayout {
     public EdgeGestureLayout(@NonNull Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
         touchSlop = android.view.ViewConfiguration.get(context).getScaledTouchSlop();
+        sideStartBandPx = ThemeHelper.dp(context, SIDE_BAND_DP);
         reset();
     }
 
@@ -102,6 +145,22 @@ public class EdgeGestureLayout extends FrameLayout {
         this.direction = direction;
         this.scrollChild = scrollChild;
         this.edgeListener = listener;
+    }
+
+    /**
+     * Liga (ou desliga) o gesto horizontal.
+     *
+     * @param direction {@link #DIRECTION_RIGHT} quando os apps encostam na direita
+     *                  (e o gesto corre da esquerda para a direita), ou
+     *                  {@link #DIRECTION_LEFT} no caso oposto.
+     * @param listener o que fazer quando o gesto e aceito; null desliga.
+     */
+    public void setSideGesture(int direction, @Nullable OnEdgeGestureListener listener) {
+        this.sideDirection = direction;
+        this.sideListener = listener;
+        if (listener == null) {
+            resetSide();
+        }
     }
 
     /**
@@ -131,7 +190,15 @@ public class EdgeGestureLayout extends FrameLayout {
                 });
     }
 
+    private void resetSide() {
+        sideTracking = false;
+        sideTravel = 0f;
+        sideStartX = 0f;
+        sideStartY = 0f;
+    }
+
     private void reset() {
+        resetSide();
         tracking = false;
         shouldIntercept = false;
         inChildAtDown = false;
@@ -178,8 +245,20 @@ public class EdgeGestureLayout extends FrameLayout {
         return false;
     }
 
-    /** Máquina de estados. Devolve se este evento deve assumir o gesto. */
+    /**
+     * Máquina de estados. Devolve se este evento deve assumir o gesto.
+     *
+     * <p>O braço horizontal é consultado antes do vertical em todo {@code MOVE}:
+     * quem está de pé é o arrasto na horizontal, e quem decide é o próprio arrasto,
+     * não a ordem em que as telas registram os gestos.
+     */
     private boolean observe(MotionEvent event) {
+        if (sideListener != null) {
+            boolean taken = observeSide(event);
+            if (taken) {
+                return true;
+            }
+        }
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
                 downX = event.getRawX();
@@ -239,6 +318,99 @@ public class EdgeGestureLayout extends FrameLayout {
             default:
                 return tracking;
         }
+    }
+
+    /**
+     * O braço horizontal. Devolve true quando este evento pertence a ele.
+     *
+     * <p>Três decisões que explicam o comportamento:
+     *
+     * <ul>
+     *   <li><b>Só nasce na faixa lateral.</b> Nascendo no meio da tela, o gesto
+     *   disputaria a rolagem da lista com o dedo do polegar. Nascer na borda é o
+     *   que torna a disputa impossível: a lista nunca começa ali.
+     *   <li><b>Trava de eixo de 1.2, como a do vertical.</b> É o que impede um
+     *   arrasto diagonal de acionar o gesto errado.
+     *   <li><b>Só percorre, não arremessa.</b> Medir distância e não velocidade:
+     *   soltar o dedo com força dispara o gesto sem querer, e o gesto errado é
+     *   pior do que o gesto atrasado.
+     * </ul>
+     */
+    private boolean observeSide(MotionEvent event) {
+        float width = getWidth() > 0 ? getWidth()
+                : getResources().getDisplayMetrics().widthPixels;
+        switch (event.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN:
+                sideTracking = false;
+                sideTravel = 0f;
+                sideStartX = event.getRawX();
+                sideStartY = event.getRawY();
+                return false;
+
+            case MotionEvent.ACTION_MOVE: {
+                if (sideTracking) {
+                    float dx = event.getRawX() - sideStartX;
+                    float signed = sideDirection == DIRECTION_RIGHT ? dx : -dx;
+                    if (signed > sideTravel) {
+                        sideTravel = signed;
+                    }
+                    return true;
+                }
+                float dx = event.getRawX() - sideStartX;
+                float dy = event.getRawY() - sideStartY;
+                // Fora da faixa lateral: o arrasto e da lista, nosso nao.
+                if (!startedInSideBand(sideStartX, width)) {
+                    return false;
+                }
+                // Trava de eixo: arrasto claramente vertical pertence ao outro
+                // braço, e nao a este.
+                if (Math.abs(dx) < Math.abs(dy) * 1.2f) {
+                    return false;
+                }
+                float signed = sideDirection == DIRECTION_RIGHT ? dx : -dx;
+                if (signed > touchSlop) {
+                    sideTracking = true;
+                    sideTravel = Math.max(signed, 0f);
+                    return true;
+                }
+                return false;
+            }
+
+            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_CANCEL: {
+                boolean fire = sideTracking && sideTravel >= computeSideMinTravel(width);
+                resetSide();
+                if (fire) {
+                    sideListener.onEdgeGesture();
+                }
+                return false;
+            }
+
+            case MotionEvent.ACTION_POINTER_DOWN:
+                // Segunda unha cancela o gesto, como no vertical.
+                resetSide();
+                return false;
+
+            default:
+                return sideTracking;
+        }
+    }
+
+    /**
+     * Percurso minimo do gesto horizontal.
+     *
+     * <p>Medido na largura, e nao na altura: o gesto corre de lado, e um percentual
+     * da altura nao diria nada sobre o quanto falta andar. O piso de 56dp evita que
+     * um arrasto curto e nervoso abra a tela sem a pessoa querer.
+     */
+    private float computeSideMinTravel(float width) {
+        return Math.max(
+                ThemeHelper.dp(getContext(), SIDE_MIN_TRAVEL_DP),
+                width * 0.18f);
+    }
+
+    private boolean startedInSideBand(float rawX, float width) {
+        return rawX <= sideStartBandPx || rawX >= width - sideStartBandPx;
     }
 
     private boolean isInsideScrollChild(float rawX, float rawY) {

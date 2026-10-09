@@ -1,8 +1,11 @@
 package com.minimal.launcher;
 
 import android.content.Context;
+import android.content.Intent;
 
 import androidx.annotation.NonNull;
+
+import com.minimal.launcher.recents.RecentAppsActivity;
 
 /**
  * Medidas da tela que o launcher se adapta: quantos favoritos cabem e o quanto
@@ -110,5 +113,25 @@ public final class LauncherUtils {
         float usable = usableHeightPx(context) - headerHeight - gap
                 - BOTTOM_CHROME_DP * density;
         return Math.max(MIN, Math.min(MAX, (int) (usable / rowHeight)));
+    }
+
+    /**
+     * Liga o gesto horizontal que abre a tela de apps recentes.
+     *
+     * <p>Fica aqui porque as tres telas precisam do mesmo gesto e da mesma regra: ele
+     * corre na direcao para onde os nomes encostam, que e a mao dominante. Se as
+     * telas decidissem isso sozinhas, uma delas esqueceria e o gesto pararia de
+     * funcionar em uma delas sem ninguem perceber.
+     */
+    public static void bindRecentAppsGesture(@NonNull EdgeGestureLayout root) {
+        boolean appsOnRight = Prefs.ALIGN_RIGHT
+                .equals(new Prefs(root.getContext()).getDominantHand());
+        root.setSideGesture(
+                appsOnRight
+                        ? EdgeGestureLayout.DIRECTION_RIGHT
+                        : EdgeGestureLayout.DIRECTION_LEFT,
+                () -> root.getContext().startActivity(
+                        new Intent(root.getContext(), RecentAppsActivity.class)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
     }
 }
