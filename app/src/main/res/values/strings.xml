@@ -81,4 +81,12 @@
 
     <!-- Ações -->
     <string name="action_cancel">Cancelar</string>
+
+    <!-- Tela de apps recentes -->
+    <string name="recent_list_description">Lista de apps recentes</string>
+    <string name="recent_dismiss">×</string>
+    <string name="recent_clear_all">Limpar tudo</string>
+    <string name="recent_empty">Nenhum app recente</string>
+    <string name="recent_usage_permission_hint">Ligue o acesso a dados de uso nas configurações do sistema para ver os apps recentes</string>
+    <string name="recent_shizuku_missing">O Shizuku precisa estar rodando para encerrar apps</string>
 </resources>

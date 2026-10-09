@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Tela de apps recentes: só a lista.
+
+  Sem cabeçalho, de propósito. A busca e as configurações têm título porque são
+  telas de consulta; esta é uma lista, como a tela inicial, e a tela inicial não
+  tem. O padding superior de clock_list_gap é o mesmo respiro que separa o
+  relógio da lista lá em cima, então a primeira linha não gruda no status bar.
+
+  O EdgeGestureLayout é um FrameLayout: por isso o RecyclerView ocupa a tela
+  inteira sem layout_weight.
+-->
+<com.minimal.launcher.EdgeGestureLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recent_apps_list"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:contentDescription="@string/recent_list_description"
+        android:overScrollMode="never"
+        android:paddingTop="@dimen/clock_list_gap"
+        android:scrollbars="none" />
+
+</com.minimal.launcher.EdgeGestureLayout>
