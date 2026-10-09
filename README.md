@@ -82,6 +82,10 @@ quiser, e é aí que as notificações aparecem como sempre.
 | Na busca: tocar no resultado, ou enter | Abre esse app — inclusive com o texto pela metade: `tk` abre o TikTok |
 | Na busca: deslizar para baixo ou voltar | Fecha a busca |
 | Na busca: o teclado sumir | Fecha a busca: sem teclado não há busca |
+| Na tela de recentes: tocar no nome | Abre o app |
+| Na tela de recentes: tocar no X | Tira o app da lista e tenta encerrá-lo |
+| Na tela de recentes: tocar em "Limpar tudo" | Esvazia a lista e tenta encerrar tudo |
+| Na tela de recentes: deslizar para baixo ou voltar | Fecha |
 
 ### Por que o arrasto para cima não colide com o sistema
 
@@ -350,6 +354,14 @@ app/src/main/java/com/minimal/launcher/
 │   ├── AppListCallback.java    interface de cliques
 │   ├── AppMenu.java            diálogo do toque longo
 │   └── PackageChangeReceiver.java
+├── recents/
+│   ├── RecentAppsActivity.java tela de apps recentes: só texto, com X
+│   ├── RecentAppsSource.java   histórico de uso do sistema → AppEntry
+│   ├── RecentRanker.java       ordem, dedup e dispensa: puro, sem Android
+│   ├── RecentListAdapter.java  linha com nome e X, espelhando a mão dominante
+│   ├── DismissedStore.java     pacote → instante da dispensa
+│   ├── TaskKiller.java         interface de encerrar, sem Android
+│   └── ShizukuTaskKiller.java  a implementação, como melhor esforço
 └── settings/
     └── SettingsActivity.java
 ```
@@ -370,4 +382,44 @@ sozinha esperando por alguma coisa.
 
 ## Fora do escopo, por decisão
 
-Ícones, widgets, múltiplas telas, pastas, root e publicação na Play Store.
+Ícones, widgets, pastas, root e publicação na Play Store.
+
+A tela de apps recentes é a terceira tela do app, e ela não conta como "múltiplas
+telas" neste sentido: é uma lista de consulta, não uma página de navegação, não
+tem pasta, não tem ícone e não muda a proposta minimalista. Ícones continuam fora
+de qualquer tela.
+
+## A tela de apps recentes
+
+Só texto: os nomes, em ordem de uso real, mais um X por linha. Sem ícone, sem
+miniatura do último momento, sem imagem nenhuma — a mesma proposta da tela
+inicial, e por isso o mesmo estilo de linha.
+
+**Ela não substitui a tela de recents do Android.** A tela de recents mora dentro
+do SystemUI e não tem API pública para um app de terceiros substituí-la. Esta é
+uma tela à parte, aberta por atalho do sistema (duplo toque no power, segurar
+volume, ou o gesto que a ROM oferecer). Interceptar o gesto de recents com um
+`AccessibilityService` é possível e foi considerado, mas o recents do sistema
+pisca antes da nossa tela, exige permissão de acessibilidade e quebra em
+atualização de ROM.
+
+**A lista vem do histórico do sistema, não do que passou pelo launcher.** É o
+`UsageStatsManager`, e por isso aparecem apps abertos por notificação, por link ou
+por outro launcher. O custo é a permissão de acesso a dados de uso, que não tem
+diálogo: liga-se em Configurações → Aplicativos → Minimal Launcher → Uso de
+dados. Sem ela a tela diz como conseguir, em vez de ficar vazia sem explicação —
+o sistema não avisa que faltou, devolve lista vazia e segue vivo.
+
+**O X significa sair da lista**, sempre, para qualquer app. Quando o app pode ser
+encerrado, ele também é; quando não pode, só sai. Um X que fizesse uma coisa
+nuns apps e outra nos demais seria pior do que nenhum X, porque o usuário não
+teria como saber qual é qual antes de tocar. Encerrar usa Shizuku, e é melhor
+esforço: sem ele a tela continua limpa, e o que não acontece é o encerramento.
+
+A dispensa guarda o **instante** em que o app foi tirado, não um flag. É essa
+comparação com o último uso que faz o app voltar sozinho quando é aberto de novo,
+e o que impede o "limpar tudo" de virar um apagão que o usuário não desfaz.
+
+A tela é registrada **sem `CATEGORY_LAUNCHER`**. É isso que a mantém fora da
+lista de apps e da busca, já que as duas listam o que tem essa categoria; o atalho
+do sistema a alcança por intent explícito, que não depende de filtro.
