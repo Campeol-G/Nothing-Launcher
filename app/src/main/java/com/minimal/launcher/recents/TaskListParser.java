@@ -5,8 +5,10 @@ import androidx.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -43,6 +45,7 @@ final class TaskListParser {
     private static final String TYPE_KEY = "type=";
     private static final String COMPONENT_KEY = "mActivityComponent=";
     private static final String COMPONENT_FALLBACK_KEY = "cmp=";
+    private static final String LAST_ACTIVE_KEY = "lastActiveTime=";
 
     private TaskListParser() {
     }
@@ -67,12 +70,50 @@ final class TaskListParser {
      */
     @NonNull
     static List<String> launchablePackages(@Nullable String dumpsysOutput) {
+        return recentTasks(dumpsysOutput).packages;
+    }
+
+    /** Uma task do sistema: o pacote e quando ele ficou ativo por último. */
+    static final class Task {
+        final String packageName;
+        final long lastActiveTime;
+
+        Task(@NonNull String packageName, long lastActiveTime) {
+            this.packageName = packageName;
+            this.lastActiveTime = lastActiveTime;
+        }
+    }
+
+    /** O que o parser devolve: a lista na ordem do sistema, e o instante de cada uma. */
+    static final class Tasks {
+        final List<String> packages;
+        final Map<String, Long> lastActiveAt;
+
+        Tasks(@NonNull List<String> packages, @NonNull Map<String, Long> lastActiveAt) {
+            this.packages = Collections.unmodifiableList(packages);
+            this.lastActiveAt = Collections.unmodifiableMap(lastActiveAt);
+        }
+    }
+
+    /**
+     * As tasks do sistema, com o instante de cada uma.
+     *
+     * <p>O instante é o {@code lastActiveTime} do dumpsys, e é ele que diz à tela se
+     * uma dispensa ainda vale: a task é a mesma antes e depois de o app ser
+     * reaberto, e só o instante muda.
+     */
+    @NonNull
+    static Tasks recentTasks(@Nullable String dumpsysOutput) {
         if (dumpsysOutput == null || dumpsysOutput.isEmpty()) {
-            return Collections.emptyList();
+            return new Tasks(Collections.emptyList(), Collections.emptyMap());
         }
 
-        Set<String> packages = new LinkedHashSet<>();
+        List<String> packages = new ArrayList<>();
+        Map<String, Long> lastActiveAt = new HashMap<>();
+        Set<String> seen = new LinkedHashSet<>();
         String type = null;
+        String packageName = null;
+        long lastActive = 0L;
         boolean insideBlock = false;
 
         for (String line : dumpsysOutput.split("\n")) {
@@ -80,7 +121,10 @@ final class TaskListParser {
 
             if (trimmed.startsWith(BLOCK_PREFIX)) {
                 // Bloco novo: o que valia era do bloco anterior.
+                flush(seen, packages, lastActiveAt, type, packageName, lastActive);
                 type = valueAfter(trimmed, TYPE_KEY);
+                packageName = null;
+                lastActive = 0L;
                 insideBlock = true;
                 continue;
             }
@@ -91,26 +135,63 @@ final class TaskListParser {
             // filtro é por conteúdo e não por primeira letra: a linha do intent
             // começa com "i", e um beginsWith("m") a descartava antes do fallback
             // ter chance de rodar.
+            if (trimmed.contains(LAST_ACTIVE_KEY)) {
+                lastActive = parseMillis(valueAfter(trimmed, LAST_ACTIVE_KEY));
+                continue;
+            }
+
             boolean componentLine = trimmed.contains(COMPONENT_KEY);
             boolean intentLine = trimmed.startsWith("intent=");
             if (!componentLine && !intentLine) {
                 continue;
             }
 
-            String packageName = packageOf(valueAfter(trimmed, COMPONENT_KEY));
-            if (packageName == null) {
+            String found = packageOf(valueAfter(trimmed, COMPONENT_KEY));
+            if (found == null) {
                 // O intent traz o mesmo componente em outra notação. Serve de
                 // reserva para o caso de o bloco não ter a linha de componente.
-                packageName = packageOf(valueAfter(intentOf(line), COMPONENT_FALLBACK_KEY));
+                found = packageOf(valueAfter(intentOf(line), COMPONENT_FALLBACK_KEY));
             }
-            if (packageName == null
-                    || NON_APP_TASK_TYPES.contains(type)
-                    || OUR_PACKAGE.equals(packageName)) {
-                continue;
+            if (found != null) {
+                packageName = found;
             }
-            packages.add(packageName);
         }
-        return Collections.unmodifiableList(new ArrayList<>(packages));
+        flush(seen, packages, lastActiveAt, type, packageName, lastActive);
+        return new Tasks(packages, lastActiveAt);
+    }
+
+    /** O dumpsys escreve {@code 208466837 (inactive for 0s)}: só o número importa. */
+    private static long parseMillis(@Nullable String raw) {
+        if (raw == null) {
+            return 0L;
+        }
+        int paren = raw.indexOf(' ');
+        String digits = paren < 0 ? raw : raw.substring(0, paren);
+        try {
+            return Long.parseLong(digits);
+        } catch (NumberFormatException ignored) {
+            // Instante ilegível: 0, que trata a dispensa como mais nova que a task
+            // e mantém o app escondido. Errar para esconde é melhor que errar para
+            // mostrar um app que a pessoa mandou tirar.
+            return 0L;
+        }
+    }
+
+    /** Fecha o bloco atual, se ele for um app. */
+    private static void flush(@NonNull Set<String> seen,
+                              @NonNull List<String> packages,
+                              @NonNull Map<String, Long> lastActiveAt,
+                              @Nullable String type,
+                              @Nullable String packageName,
+                              long lastActive) {
+        if (packageName == null
+                || NON_APP_TASK_TYPES.contains(type)
+                || OUR_PACKAGE.equals(packageName)
+                || !seen.add(packageName)) {
+            return;
+        }
+        packages.add(packageName);
+        lastActiveAt.put(packageName, lastActive);
     }
 
     /** O trecho entre chaves da linha {@code intent={...}}, ou null se não houver. */

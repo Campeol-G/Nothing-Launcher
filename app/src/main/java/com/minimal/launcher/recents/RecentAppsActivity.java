@@ -213,7 +213,10 @@ public final class RecentAppsActivity extends AppCompatActivity
         // A dispensa vai primeiro: ela é o que tira o app da lista, e é ela que
         // sobrevive à falta de Shizuku. Encerrar é o que vem depois, e pode não
         // acontecer — o app continua aberto, que é o que o X promete.
-        dismissedStore.dismiss(entry.packageName);
+        // O instante é o do relogio monotonic: e ele que diz a tela se a task e de
+        // antes ou de depois do X. Um app reaberto pela pessoa tem task mais nova
+        // que a dispensa e volta para a lista sozinho.
+        dismissedStore.dismiss(entry.packageName, android.os.SystemClock.elapsedRealtime());
         shown.remove(entry);
         adapter.removeAt(position);
         killOffMainThread(() -> killer.kill(entry.packageName));

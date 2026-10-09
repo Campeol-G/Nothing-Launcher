@@ -160,10 +160,32 @@ public final class ShizukuTaskKiller implements TaskKiller {
         } catch (Throwable ignored) {
             // Já executou; só o pipe de comando não fechou.
         }
+        waitFor(process);
+    }
+
+    /**
+     * Espera o comando terminar.
+     *
+     * <p>Destruir o processo remoto logo depois de criá-lo matava o próprio comando
+     * antes que ele rodasse — o {@code am force-stop} saía no meio, e o app ficava
+     * na lista sem ter sido encerrado. É o que fazia o X "não fechar de verdade".
+     * O limite de 3s é só para um comando travado não segurar a fila de apps.
+     */
+    private static void waitFor(@NonNull IRemoteProcess process) {
+        try {
+            // A unidade é um TimeUnit pelo nome, e não string livre: o servidor
+            // faz valueOf() e "ms" não existe — o enum é MILLISECONDS.
+            // A unidade é um TimeUnit pelo nome, e não string livre: o servidor
+            // faz valueOf() e "ms" não existe — o enum é MILLISECONDS.
+            process.waitForTimeout(3_000L, java.util.concurrent.TimeUnit.MILLISECONDS.name());
+        } catch (Throwable ignored) {
+            // Estourou o tempo ou a unidade não bateu: o comando pode não ter
+            // rodado, e não vale insistir. O X tira o app da lista de qualquer jeito.
+        }
         try {
             process.destroy();
         } catch (Throwable ignored) {
-            // O comando é de vida curta mesmo; não vale reagir.
+            // Já morreu sozinho, que é o caso comum.
         }
     }
 

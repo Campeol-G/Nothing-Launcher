@@ -110,9 +110,11 @@ public final class RecentAppsSource {
     @NonNull
     private static List<AppEntry> crossWithInstalledApps(@NonNull Context context,
                                                          @NonNull String dumpsysOutput) {
+        TaskListParser.Tasks tasks = TaskListParser.recentTasks(dumpsysOutput);
         List<String> packages = RecentRanker.apply(
-                TaskListParser.launchablePackages(dumpsysOutput),
-                new DismissedStore(context).snapshot());
+                tasks.packages,
+                new DismissedStore(context).snapshot(),
+                tasks.lastActiveAt);
 
         HashMap<String, AppEntry> byPackage = new HashMap<>();
         for (AppEntry installed : AppRepository.get(context).getAllApps()) {
