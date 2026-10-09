@@ -56,6 +56,9 @@ public class EdgeGestureLayout extends FrameLayout {
      * faz para alcancar a lista. Sem esta exclusao, buscar e trocar de app
      * viravam o mesmo gesto, e a busca disparava no meio de outra acao.
      *
+     * <p>So o gesto para cima e excluido. Para descer nao ha disputa com o
+     * sistema, e a faixa ali só fazia o gesto ser descartado em silencio.
+     *
      * <p>O valor vem do inset de gestos do sistema, entao respeita o aparelho: nos
      * que usam gesto, e a altura da barra de navegacao nos que usam botoes.
      */
@@ -159,10 +162,20 @@ public class EdgeGestureLayout extends FrameLayout {
         if (tracking) {
             return true;
         }
+        boolean handled = super.onTouchEvent(event);
+        // Sem isso o gesto para baixo nunca chegava a comecar. Numa tela sem
+        // lista e sem view clicavel, o DOWN caia aqui e era devolvido como nao
+        // tratado — e o sistema, diante de um DOWN nao tratado, para de entregar
+        // os eventos seguintes a essa janela. O arrasto para cima funcionava
+        // porque a lista consumia o DOWN e segurava o gesto; sozinho, na tela de
+        // busca, ele perdia o resto do toque.
+        if (handled || event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+            return true;
+        }
         // Sem tracking, devolve o default: é o que permite o toque longo na área
         // vazia ser reconhecido por quem define o listener. performClick não é
         // chamado porque clique simples na área vazia não faz nada, por projeto.
-        return super.onTouchEvent(event);
+        return false;
     }
 
     /** Máquina de estados. Devolve se este evento deve assumir o gesto. */
@@ -240,7 +253,9 @@ public class EdgeGestureLayout extends FrameLayout {
 
     /** O toque comecou na faixa inferior que pertence ao sistema? */
     private boolean startsInBottomGestureExclusion(float rawY) {
-        if (bottomGestureExclusionPx <= 0) {
+        if (direction != DIRECTION_UP || bottomGestureExclusionPx <= 0) {
+            // Quem fecha a tela arrasta para baixo, e para baixo a borda
+            // inferior pertence apenas ao app.
             return false;
         }
         float height = getHeight() > 0
@@ -277,14 +292,22 @@ public class EdgeGestureLayout extends FrameLayout {
         return direction == DIRECTION_UP ? !canScrollDown : !canScrollUp;
     }
 
-    /** 8% da altura, com piso e teto para funcionar bem em telas altas e baixas. */
+    /**
+     * Distancia minima para o gesto valer.
+     *
+     * <p>Fechar uma tela e um gesto curto e comum: o dedo ja esta indo embora.
+     * Abrir a busca compete com o polegar rolando a lista, e ai o percurso longo
+     * evita disparar por engano. Por isso o piso e a fracao de tela sao
+     * diferentes por direcao: 48dp e 5% para descer, 96dp e 8% para subir.
+     */
     private float computeMinTravel() {
         float height = getHeight() > 0
                 ? getHeight()
                 : getResources().getDisplayMetrics().heightPixels;
         float density = getResources().getDisplayMetrics().density;
-        float fromHeight = height * 0.08f;
-        float min = Math.min(160f * density, 96f * density);
-        return Math.max(min, fromHeight);
+        boolean up = direction == DIRECTION_UP;
+        float fromHeight = height * (up ? 0.08f : 0.05f);
+        float floorDp = up ? 96f : 48f;
+        return Math.max(floorDp * density, fromHeight);
     }
 }

@@ -20,11 +20,21 @@ public final class AppEntry {
     public final String label;
     /** Componente achatado, no formato {@link ComponentName#flattenToString()}. */
     public final String component;
+    /**
+     * Rótulo em minusculas e sem acento, calculado uma vez na construção.
+     *
+     * <p>É o que a busca compara. Normalizar aqui e não a cada tecla é a
+     * diferença entre a busca responder na hora e demorar meio segundo: eram
+     * ~200 apps normalizados por caractere digitado, cada um compilando um regex.
+     */
+    @NonNull
+    public final String normalizedLabel;
 
     public AppEntry(@NonNull String packageName, @NonNull String label, @NonNull String component) {
         this.packageName = packageName;
         this.label = label;
         this.component = component;
+        this.normalizedLabel = AppSearch.normalize(label);
     }
 
     /** Reconstrói a entrada a partir do componente persistido. Retorna null se o app sumiu. */

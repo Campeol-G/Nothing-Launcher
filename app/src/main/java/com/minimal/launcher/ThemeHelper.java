@@ -13,6 +13,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.graphics.Insets;
@@ -43,6 +44,11 @@ public final class ThemeHelper {
      * os dois gestos competiriam. 48dp é a altura de referência do gesto.
      */
     private static final int SYSTEM_GESTURE_MARGIN_DP = 48;
+
+    /** Aviso de que o teclado apareceu ou sumiu. */
+    public interface KeyboardListener {
+        void onKeyboardVisibilityChanged(boolean visible);
+    }
 
     /** Deve ser chamado antes de {@code super.onCreate}. */
     public static void applyNightMode(@NonNull AppCompatActivity activity) {
@@ -260,6 +266,23 @@ public final class ThemeHelper {
                                    int sideDp,
                                    int topDp,
                                    int bottomDp) {
+        applyInsets(activity, root, sideDp, topDp, bottomDp, null);
+    }
+
+    /**
+     * Mesma coisa, avisa quem precisar saber quando o teclado aparece ou some.
+     *
+     * <p>A busca depende disso: o teclado e requisito da tela, entao a tela
+     * precisa saber que ele foi embora. O aviso vem dos insets e nao de
+     * temporizador, porque e o unico jeito de distinguir "o teclado esta
+     * subindo" de "o teclado nunca chegou".
+     */
+    public static void applyInsets(@NonNull AppCompatActivity activity,
+                                   @NonNull View root,
+                                   int sideDp,
+                                   int topDp,
+                                   int bottomDp,
+                                   @Nullable KeyboardListener keyboardListener) {
         Window window = activity.getWindow();
         WindowCompat.setDecorFitsSystemWindows(window, false);
         final int side = dp(root, sideDp);
@@ -286,6 +309,11 @@ public final class ThemeHelper {
                 int reported = Math.max(gestures.bottom, nav.bottom);
                 ((EdgeGestureLayout) view).setBottomGestureExclusion(
                         Math.max(reported, dp(view, SYSTEM_GESTURE_MARGIN_DP)));
+            }
+
+            if (keyboardListener != null) {
+                keyboardListener.onKeyboardVisibilityChanged(
+                        windowInsets.isVisible(WindowInsetsCompat.Type.ime()));
             }
             return windowInsets;
         });

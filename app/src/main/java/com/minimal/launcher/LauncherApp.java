@@ -19,7 +19,10 @@ public final class LauncherApp extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-        AppRepository.get(this);
+        // A lista de apps comeca a ser montada aqui, fora da main thread, para
+        // estar pronta antes de o usuario pedir a busca. Nao ha tela para
+        // esperar: o trabalho acontece enquanto a tela inicial esta a vista.
+        AppRepository.get(this).preload();
         new FavoritesStore(this).ensureSeeded();
         registerPackageWatcher(this);
     }

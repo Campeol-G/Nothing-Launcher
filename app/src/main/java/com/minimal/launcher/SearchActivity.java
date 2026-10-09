@@ -20,21 +20,24 @@ import com.minimal.launcher.apps.AppEntry;
 import com.minimal.launcher.apps.AppMenu;
 import com.minimal.launcher.apps.AppRepository;
 
-import java.text.Normalizer;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * Busca por qualquer app instalado, com um unico resultado por vez.
  *
- * <p>Conforme o usuario digita, a tela mostra so o primeiro app que corresponde
- * em ordem alfabetica. Digitar mais uma letra troca o resultado. Os favoritos
- * tambem aparecem aqui: o que eles gains e acesso direto, nao exclusao.
+ * <p>Conforme o usuario digita, a tela mostra so o app que melhor responde ao
+ * texto, e quantos outros ficaram de fora. O resultado mostrado e o mesmo que o
+ * enter abre: a tela e o enter usam o mesmo ranqueamento, que esta em
+ * {@link com.minimal.launcher.apps.AppSearch}. E por isso que o enter funciona
+ * com o texto pela metade: "tk" encontra TikTok.
  *
  * <p>Como so um app aparece, a linha "+N outros" conta quantos ficaram de fora.
  * Sem ela a busca pareceria quebrada quando o primeiro resultado não é o que a
  * pessoa procurava.
+ *
+ * <p>O teclado nao e um detalhe desta tela, e precondicao dela: nao existe
+ * busca sem teclado. Por isso ele e pedido na abertura, repetido enquanto a
+ * janela nao ganhar foco, e a tela fecha se ele sumir.
  */
 public final class SearchActivity extends AppCompatActivity implements AppMenu.Listener {
 
@@ -51,6 +54,21 @@ public final class SearchActivity extends AppCompatActivity implements AppMenu.L
     @Nullable
     private AppEntry match;
 
+    /**
+     * Qual consulta o resultado na tela responde.
+     *
+     * <p>A busca e assincrona, entao a resposta de "tk" pode chegar depois da
+     * de "tikt". O numero da consulta separa as duas: uma resposta velha e
+     * descartada em vez de sobrescrever o que o usuario esta vendo agora.
+     */
+    private int queryToken;
+
+    /** A activity esta em primeiro plano? So interessa quando o teclado some. */
+    private boolean resumed;
+
+    /** O teclado ja esteve visivel nesta tela? Antes disso, ele nao "sumiu". */
+    private boolean keyboardSeen;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         ThemeHelper.applyNightMode(this);
@@ -66,7 +84,9 @@ public final class SearchActivity extends AppCompatActivity implements AppMenu.L
         emptyHint = findViewById(R.id.search_empty_hint);
         footer = findViewById(R.id.search_footer);
 
-        ThemeHelper.applyInsets(this, root, 26, 22, 10);
+        // O teclado e precondicao da tela, entao a tela precisa saber quando ele
+        // vai embora.
+        ThemeHelper.applyInsets(this, root, 26, 22, 10, this::onKeyboardVisibilityChanged);
         ThemeHelper.applySystemBars(this);
 
         int foreground = ThemeHelper.getSearchForegroundColor(this);
@@ -106,10 +126,12 @@ public final class SearchActivity extends AppCompatActivity implements AppMenu.L
 
         // Deslizar para baixo fecha a busca.
         //
-        // Este gesto é seguro com a navegação por gestos: a puxada do sistema
-        // para abrir a gaveta de notificações começa na borda superior, e o
-        // arrasto do app é decidido aqui, no meio da tela. Quem preferir não
-        // usar gesto algum tem o botão voltar do sistema e o Enter do teclado.
+        // Este gesto e seguro com a navegacao por gestos: a puxada do sistema
+        // para abrir a gaveta de notificacoes comeca na borda superior, e o
+        // arrasto do app e decidido aqui, no meio da tela. A faixa reservada ao
+        // gesto do sistema nao entra aqui — ela existe para o arrasto para cima,
+        // que disputa o home. Quem preferir nao usar gesto algum tem o botao
+        // voltar do sistema e o Enter do teclado.
         root.setEdgeGesture(EdgeGestureLayout.DIRECTION_DOWN, null, this::finish);
 
         search.addTextChangedListener(new TextWatcher() {
@@ -154,7 +176,25 @@ public final class SearchActivity extends AppCompatActivity implements AppMenu.L
     @Override
     protected void onResume() {
         super.onResume();
+        resumed = true;
         focusSearchAndShowKeyboard();
+    }
+
+    @Override
+    protected void onPause() {
+        resumed = false;
+        super.onPause();
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        // A janela nem sempre tem foco no primeiro onResume, e um showSoftInput
+        // pedido antes disso e descartado. Repetir aqui e o que faz o teclado
+        // abrir junto com a tela.
+        if (hasFocus) {
+            focusSearchAndShowKeyboard();
+        }
     }
 
     /**
@@ -185,27 +225,79 @@ public final class SearchActivity extends AppCompatActivity implements AppMenu.L
                 });
     }
 
+    /**
+     * Pede o teclado, sempre.
+     *
+     * <p>Aqui estava a causa do teclado não subir junto com a tela: o pedido era
+     * guardado por {@code imm.isActive(view)}, e essa resposta é {@code true}
+     * quando a activity já é servida pela IME — mesmo com o teclado escondido.
+     * O pedido era descartado antes de sair. Como nesta tela o teclado é
+     * precondição, não há o que guardar: {@code showSoftInput} não faz nada se o
+     * teclado já estiver aberto.
+     */
     private void showKeyboard() {
         if (isFinishing() || isDestroyed()) {
             return;
         }
         InputMethodManager imm = getSystemService(InputMethodManager.class);
-        if (imm != null && !imm.isActive(search)) {
+        if (imm != null) {
             imm.showSoftInput(search, InputMethodManager.SHOW_IMPLICIT);
         }
     }
 
+    // ------------------------------------------------------------- teclado
+
+    /**
+     * O teclado sumiu: a tela vai embora junto.
+     *
+     * <p>Sem teclado esta tela nao tem funcao — quem abriu a busca queria
+     * escrever. Vale tanto para o gesto de descer no teclado, que o proprio
+     * sistema reconhece, quanto para o botao voltar, que primeiro esconde o
+     * teclado antes de chegar aqui.
+     *
+     * <p>Duas condicoes impedem que isso vire uma corrida: o teclado precisa ter
+     * estado visivel (antes disso ele so ainda nao chegou), e a activity precisa
+     * estar em primeiro plano com foco (assim abrir um app, que tambem fecha o
+     * teclado, nao fecha a busca junto).
+     */
+    private void onKeyboardVisibilityChanged(boolean visible) {
+        if (visible) {
+            keyboardSeen = true;
+            return;
+        }
+        if (!keyboardSeen || !resumed || !hasWindowFocus()) {
+            return;
+        }
+        finish();
+    }
+
     // -------------------------------------------------------------- resultado
 
-    /** Recalcula o unico resultado a partir do texto atual. */
+    /**
+     * Pede o resultado para o texto atual.
+     *
+     * <p>A busca acontece fora da main thread: ler todos os apps instalados
+     * custa meio segundo, e foi justamente na main thread que a primeira tecla
+     * ficava esperando. A resposta vem para a main thread e so vale se ainda for
+     * a consulta que o usuario esta digitando.
+     */
     private void update(@NonNull String query) {
-        List<AppEntry> matches = findMatches(query);
+        int token = ++queryToken;
+        AppRepository.get(this).searchAsync(query, matches -> {
+            if (token != queryToken || isFinishing() || isDestroyed()) {
+                return;
+            }
+            show(matches);
+        });
+    }
 
+    /** Desenha o resultado ranqueado: um app e a contagem do que ficou de fora. */
+    private void show(@NonNull List<AppEntry> matches) {
         if (matches.isEmpty()) {
             match = null;
             resultBlock.setVisibility(View.GONE);
             emptyHint.setVisibility(View.VISIBLE);
-            emptyHint.setText(TextUtils.isEmpty(query)
+            emptyHint.setText(TextUtils.isEmpty(search.getText())
                     ? getString(R.string.search_idle_hint)
                     : getString(R.string.search_no_results));
             return;
@@ -227,36 +319,11 @@ public final class SearchActivity extends AppCompatActivity implements AppMenu.L
         }
     }
 
-    /**
-     * Apps que correspondem, em ordem alfabetica. Remove acentos e caixa antes
-     * de comparar: "cafe" encontra "Cafe".
-     */
-    @NonNull
-    private List<AppEntry> findMatches(@NonNull String query) {
-        String normalized = normalize(query);
-        List<AppEntry> matches = new ArrayList<>();
-        if (normalized.isEmpty()) {
-            return matches;
-        }
-        for (AppEntry entry : AppRepository.get(this).getAllApps()) {
-            if (normalize(entry.label).contains(normalized)) {
-                matches.add(entry);
-            }
-        }
-        return matches;
-    }
-
+    /** Abre o app que a tela esta mostrando. */
     private void launchMatch() {
         if (match != null) {
             match.launch(this);
         }
-    }
-
-    @NonNull
-    private static String normalize(@NonNull String value) {
-        String lower = value.toLowerCase(Locale.getDefault());
-        return Normalizer.normalize(lower, Normalizer.Form.NFD)
-                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
     }
 
     // ------------------------------------------------------------------ menu

@@ -60,7 +60,7 @@
             android:exported="false"
             android:launchMode="singleTop"
             android:theme="@style/Theme.MinimalLauncher"
-            android:windowSoftInputMode="adjustNothing" />
+            android:windowSoftInputMode="adjustNothing|stateAlwaysVisible" />
 
         <activity
             android:name=".settings.SettingsActivity"

@@ -41,16 +41,21 @@ public final class PackageChangeReceiver extends BroadcastReceiver {
         }
         instance = this;
 
+        AppRepository repository = AppRepository.get(context);
         String action = intent.getAction();
         if (Intent.ACTION_PACKAGE_CHANGED.equals(action)) {
             // Só o rótulo ou a atividade habilitada mudou: o cache ainda vale,
             // mas convém reler os favoritos porque um app pode ter saído do ar.
-            AppRepository.get(context).invalidate();
+            repository.invalidate();
+            repository.preload();
             pruneFavorites(context);
             return;
         }
 
-        AppRepository.get(context).invalidate();
+        repository.invalidate();
+        // Recarrega em segundo plano: quem instalou ou desinstalou um app espera
+        // ate a proxima busca, e nao ate a proxima tecla.
+        repository.preload();
 
         boolean removed = Intent.ACTION_PACKAGE_REMOVED.equals(action)
                 && !intent.getBooleanExtra(Intent.EXTRA_REPLACING, false);

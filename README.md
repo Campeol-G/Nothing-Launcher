@@ -78,9 +78,10 @@ quiser, e é aí que as notificações aparecem como sempre.
 | Toque longo no nome | Favoritar / Remover dos favoritos, Informações do app, Desinstalar |
 | Toque longo na área vazia | Abre a busca |
 | Toque longo no relógio ou na data | Abre as Configurações |
-| Na busca: digitar | Mostra **um** app só, o primeiro em ordem alfabético, e quantos outros ficaram de fora |
-| Na busca: tocar no resultado, ou enter | Abre esse app |
+| Na busca: digitar | Mostra **um** app só, o que melhor responde ao texto, e quantos outros ficaram de fora |
+| Na busca: tocar no resultado, ou enter | Abre esse app — inclusive com o texto pela metade: `tk` abre o TikTok |
 | Na busca: deslizar para baixo ou voltar | Fecha a busca |
+| Na busca: o teclado sumir | Fecha a busca: sem teclado não há busca |
 
 ### Por que o arrasto para cima não colide com o sistema
 
@@ -107,12 +108,83 @@ Deslizar para baixo na busca continua fechando: essa puxada do sistema começa n
 borda superior, e o arrasto do app é decidido no meio da tela. Quem preferir não
 usar gesto algum tem o botão voltar do sistema e o Enter do teclado.
 
+A faixa reservada ao sistema **só vale para o arrasto para cima**. Ela existe
+porque esse arrasto disputa o gesto de ir para a casa; para descer não há
+disputa nenhuma, e a faixa ali só fazia o gesto ser descartado em silêncio.
+
+### Por que o deslizar para baixo não funcionava
+
+Numa tela sem lista e sem view clicável — que é o caso da busca — nenhum filho
+consome o `ACTION_DOWN`. Ele caía no layout e era devolvido como não tratado, e
+**o sistema, diante de um DOWN não tratado, para de entregar os eventos
+seguintes àquela janela**. O arrasto perdia o resto do toque antes de começar.
+
+Na tela inicial isso não aparecia: o `RecyclerView` consome o DOWN e segura o
+gesto inteiro, que é por isso que o arrasto para cima sempre funcionou. Em
+`EdgeGestureLayout.onTouchEvent` o DOWN agora é consumido pelo próprio layout
+quando mais ninguém o consome.
+
+Fechar uma tela também é um gesto curto, e o limite de percurso é menor que o de
+abrir: 48dp e 5% da altura para descer, 96dp e 8% para subir. Abrir a busca
+divide o gesto com o polegar rolando a lista, e ali o percurso longo evita
+disparo por engano.
+
+### O teclado é precondição da busca
+
+A tela de busca só existe com o teclado, e isso virou regra explícita em três
+lugares:
+
+1. **Ele sobe junto.** Não basta pedir `showSoftInput`: sem
+   `stateAlwaysVisible` no manifesto, o sistema responde ao pedido com
+   `Unspecified window will hide input` e esconde o teclado de novo. Medido no
+   aparelho antes e depois.
+2. **Ele volta se a janela ganhar foco**, porque o `showSoftInput` pedido antes
+   do foco da janela é descartado.
+3. **Se ele sumir depois de ter estado visível, a tela fecha.** Vale para o
+   botão voltar — que primeiro esconde o teclado — e para o gesto de descer no
+   próprio teclado. Duas guardas impedem que vire corrida: o teclado precisa ter
+   estado visível, e a activity precisa estar em primeiro plano com foco, senão
+   abrir um app (que também fecha o teclado) fecharia a busca junto.
+
 ### Latência de entrada na busca
+
+Duas coisas levavam a primeira tecla a esperar quase um segundo, e as duas foram
+tiradas do caminho da digitação:
+
+- **A lista de apps era montada na main thread, na primeira tecla.** Ler todos os
+  apps instalados (`queryIntentActivities` + o rótulo de cada um) custa meio
+  segundo. Agora ela é montada numa thread própria, e o pedido da busca entra
+  nessa mesma fila: quem digita nunca espera, nem pela lista, nem pelo
+  ranqueamento.
+- **Cada tecla renormalizava ~200 rótulos**, com `replaceAll` compilando um regex
+  por rótulo. O rótulo normalizado passa a ser calculado uma vez, quando o app é
+  construído, e a busca virou comparação de string.
+
+A lista também é **pré-carregada** na inicialização do processo: o trabalho
+acontece enquanto a tela inicial está à vista, não quando o dedo já está
+digitando. E recarrega em segundo plano quando um app é instalado ou removido.
+Medido no aparelho: partida a frio do processo, digitando logo em seguida, o
+quadro mais longo foi de 87ms e a mediana de 11ms — antes, a thread principal
+ficava bloqueada por centenas de ms na primeira tecla.
 
 O teclado é pedido de imediato e repetido no primeiro desenho da tela, quando a
 janela já está pronta. Não há delay artificial: um `postDelayed` de 200ms que
 existia aqui custava 200ms de latência toda vez que alguém queria trocar de app,
 somados à espera do toque longo.
+
+### A busca acha o app com o texto pela metade
+
+O enter não exige o nome completo. O ranqueamento está em
+[`apps/AppSearch.java`](app/src/main/java/com/minimal/launcher/apps/AppSearch.java),
+é puro e não tem nada de Android: nome igual, nome que começa com o texto, uma
+palavra do nome que começa com o texto, nome que contém o texto e, por último, o
+texto aparecendo na ordem pulando letras — `tk` acha TikTok, `gmb` acha Gmail.
+
+A tela e o enter usam **o mesmo** ranqueamento: o que está escrito na tela é o que
+o enter abre, inclusive quando a busca não achou nada — nesse caso a tela diz
+`Nenhum app encontrado` e o enter não faz nada. A última regra exige dois
+caracteres no mínimo: com um só quase todo nome do aparelho casaria e a busca
+viraria loteria.
 
 ### A fonte se ajusta ao aparelho
 
@@ -260,7 +332,8 @@ app/src/main/java/com/minimal/launcher/
 ├── LauncherApp.java            Application: cache, favoritos iniciais, receptor de pacotes
 ├── HomeActivity.java           tela principal: relógio + favoritos ancorados no polegar
 ├── SearchActivity.java         busca, um resultado por vez
-├── EdgeGestureLayout.java      resolve o conflito gesto x scroll
+├── EdgeGestureLayout.java      resolve o conflito gesto x scroll, e faz o DOWN
+│                               ser consumido quando ninguém mais consome
 ├── ThemeHelper.java            cores, inversão noturna, edge-to-edge, barras, insets
 ├── ColorCombo.java             as 10 combinações de cor
 ├── FontCombo.java              as 8 combinações de fonte
@@ -269,8 +342,9 @@ app/src/main/java/com/minimal/launcher/
 ├── ClockFormatter.java         hora/data no formato do aparelho
 ├── SystemTimeWatcher.java      ACTION_TIME_TICK e amigos
 ├── apps/
-│   ├── AppEntry.java           app lançável (pacote, nome, componente)
-│   ├── AppRepository.java      lista de apps + resolução dos apps padrão
+│   ├── AppEntry.java           app lançável (pacote, nome, componente, nome normalizado)
+│   ├── AppRepository.java      lista de apps, fila única, resolução dos apps padrão
+│   ├── AppSearch.java          ranqueamento da busca: puro, sem Android
 │   ├── FavoritesStore.java     ordem persistida dos favoritos
 │   ├── AppListAdapter.java     linha de app: só o nome
 │   ├── AppListCallback.java    interface de cliques
@@ -288,6 +362,11 @@ A decisão de arquitetura e o porquê de cada escolha estão em
 O app não declara nenhum serviço. Nenhum receptor está no manifesto. O relógio
 usa `ACTION_TIME_TICK` (broadcast do sistema, 1x por minuto) em vez de timer
 próprio, e a lista de apps é cacheada e invalidada só quando um pacote muda.
+
+A fila de apps é uma thread só, com uma tarefa por vez, e ela é usada em três
+momentos: na inicialização do processo, quando um pacote muda e a cada tecla
+digitada. Todas as tarefas são curtas e nenhuma é periódica — nenhuma delas roda
+sozinha esperando por alguma coisa.
 
 ## Fora do escopo, por decisão
 

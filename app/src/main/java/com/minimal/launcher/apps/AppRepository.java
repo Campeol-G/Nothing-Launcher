@@ -7,9 +7,12 @@ import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.net.Uri;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.MediaStore;
 import android.provider.Settings;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import java.text.Collator;
@@ -18,6 +21,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Fonte unica dos apps lancaveis e da resolucao dos apps padrao.
@@ -25,6 +30,12 @@ import java.util.Locale;
  * <p>A lista completa e cacheada porque percorre todas as activities do
  * dispositivo - caro demais para repetir a cada toque. O cache e invalidado por
  * {@link PackageChangeReceiver}, ou seja, so quando algo muda.
+ *
+ * <p>Esse "caro demais" e da ordem de meio segundo, e a lista nunca pode ser
+ * montada na main thread: foi exatamente ali que a busca travou na primeira
+ * tecla. Por isso a montagem acontece numa thread propria, com uma fila de um
+ * so lugar - assim a busca e a recarga nao competem entre si, e o resultado
+ * volta para a main thread ja com a lista pronta.
  */
 public final class AppRepository {
 
@@ -32,6 +43,15 @@ public final class AppRepository {
 
     private final Context appContext;
     private final PackageManager packageManager;
+
+    /** Fila unica: montar a lista e rankear acontecem ali, nunca na main thread. */
+    private static final ExecutorService WORKER = Executors.newSingleThreadExecutor(runnable -> {
+        Thread thread = new Thread(runnable, "app-list");
+        thread.setDaemon(true);
+        return thread;
+    });
+
+    private static final Handler MAIN = new Handler(Looper.getMainLooper());
 
     @Nullable
     private List<AppEntry> cache;
@@ -58,6 +78,50 @@ public final class AppRepository {
     public void invalidate() {
         synchronized (this) {
             cache = null;
+        }
+    }
+
+    /**
+     * Deixa a lista pronta antes de ela ser pedida.
+     *
+     * <p>Chamar na inicializacao do processo faz o trabalho acontecer enquanto a
+     * tela inicial esta a vista, e nao enquanto o dedo do usuario ja esta
+     * digitando.
+     */
+    public void preload() {
+        WORKER.execute(() -> {
+            try {
+                getAllApps();
+            } catch (RuntimeException ignored) {
+                // A lista fica indisponivel e a busca mostra "nenhum app
+                // encontrado". Um app sendo desinstalado no meio da leitura e a
+                // causa realista, e ela nao pode derrubar o processo.
+            }
+        });
+    }
+
+    /**
+     * Busca assincrona: o resultado chega na main thread.
+     *
+     * <p>A leitura da lista acontece dentro da tarefa, entao quem chama nunca
+     * espera: nem pela lista ainda em construcao, nem pelo rankeamento.
+     */
+    public void searchAsync(@NonNull String query, @NonNull AppSearch.Callback callback) {
+        WORKER.execute(() -> MAIN.post(() -> callback.onMatches(rankQuietly(query))));
+    }
+
+    /**
+     * Rankeia sem derrubar a fila de quem espera.
+     *
+     * <p>Um app sendo desinstalado no meio da leitura e a causa realista de
+     * falha aqui, e ela nao pode virar tela branca nem travar a digitacao.
+     */
+    @NonNull
+    private List<AppEntry> rankQuietly(@NonNull String query) {
+        try {
+            return AppSearch.rank(query, getAllApps());
+        } catch (RuntimeException e) {
+            return Collections.emptyList();
         }
     }
 
