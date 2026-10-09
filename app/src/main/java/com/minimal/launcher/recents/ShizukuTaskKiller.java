@@ -1,6 +1,7 @@
 package com.minimal.launcher.recents;
 
 import android.content.pm.PackageManager;
+import android.os.Process;
 import android.os.ParcelFileDescriptor;
 
 import androidx.annotation.NonNull;
@@ -37,15 +38,6 @@ import rikka.shizuku.Shizuku;
  */
 public final class ShizukuTaskKiller implements TaskKiller {
 
-    /**
-     * A permissão que pedimos ao Shizuku.
-     *
-     * <p>É {@code -1}, o valor que a API usa para acesso total ao serviço. Pedimos
-     * uma vez só: o pedido abre uma tela de consentimento, e repetir a cada
-     * {@code onResume} seria apenas incomodar.
-     */
-    private static final int PERMISSION = -1;
-
     /** O pacote que esta classe nunca pode encerrar: o próprio launcher. */
     @NonNull
     private final String selfPackage;
@@ -78,8 +70,13 @@ public final class ShizukuTaskKiller implements TaskKiller {
         return !packageName.isEmpty() && !packageName.equals(selfPackage);
     }
 
-    @Override
-    public boolean isAvailable() {
+    /**
+     * O Shizuku está pronto para ser usado?
+     *
+     * <p>A tela de recentes depende disso tanto para ler as tasks quanto para
+     * encerrar, então a pergunta é do serviço e não de quem pede.
+     */
+    static boolean isPermissionGranted() {
         try {
             return Shizuku.pingBinder()
                     && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED;
@@ -91,18 +88,36 @@ public final class ShizukuTaskKiller implements TaskKiller {
     }
 
     @Override
+    public boolean isAvailable() {
+        return isPermissionGranted();
+    }
+
+    @Override
     public void kill(@NonNull String packageName) {
         if (!canKill(packageName, selfPackage)) {
             return;
         }
-        if (!Shizuku.pingBinder()) {
-            return;
-        }
         if (!isAvailable()) {
+            // Melhor pedir na hora em que a pessoa quer a lista, e não quando ela
+            // toca no X: consentimento pedido tarde chega tarde demais.
             requestPermissionOnce();
             return;
         }
         forceStop(packageName);
+    }
+
+    /**
+     * Pede o consentimento do Shizuku, uma vez só.
+     *
+     * <p>A tela de recentes chama isto assim que abre. Sem isso o pedido só
+     * apareceria ao tocar no X — e a pessoa precisaria descobrir o X antes de
+     * saber que a tela inteira depende do Shizuku.
+     */
+    public void requestPermission() {
+        if (!Shizuku.pingBinder()) {
+            return;
+        }
+        requestPermissionOnce();
     }
 
     @Override
@@ -158,7 +173,10 @@ public final class ShizukuTaskKiller implements TaskKiller {
         }
         permissionRequested = true;
         try {
-            Shizuku.requestPermission(PERMISSION);
+            // requestPermission pede para um PID, não para o app inteiro: quem
+            // pede é o processo, e o processo é este. Passar -1 era ignorado em
+            // silêncio pelo servidor, e o consentimento nunca aparecia.
+            Shizuku.requestPermission(Process.myPid());
         } catch (Throwable ignored) {
             // Sem Shizuku não há o que pedir, e a tela segue funcionando.
         }

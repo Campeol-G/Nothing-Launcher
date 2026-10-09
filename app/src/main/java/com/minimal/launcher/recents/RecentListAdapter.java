@@ -72,7 +72,8 @@ public final class RecentListAdapter extends RecyclerView.Adapter<RecentListAdap
     private final int textColor;
 
     private int textGravity;
-    private boolean dismissOnStart;
+    /** O X fica do lado para onde os nomes encostam, e não no lado oposto. */
+    private boolean dismissOnEnd;
 
     public RecentListAdapter(@NonNull Context context,
                              @NonNull List<AppEntry> source,
@@ -81,8 +82,11 @@ public final class RecentListAdapter extends RecyclerView.Adapter<RecentListAdap
         items.addAll(source);
 
         Prefs prefs = new Prefs(context);
-        this.dismissOnStart = Prefs.ALIGN_RIGHT.equals(prefs.getDominantHand());
-        this.textGravity = dismissOnStart ? Gravity.END : Gravity.START;
+        // Mão direita: nomes encostam na direita, e o X logo ao lado deles, na
+        // direita. Mão esquerda, o inverso. O X fica do lado dos apps para que
+        // os dois fiquem juntos e o alcance com uma mão só funcione.
+        this.dismissOnEnd = Prefs.ALIGN_RIGHT.equals(prefs.getDominantHand());
+        this.textGravity = dismissOnEnd ? Gravity.END : Gravity.START;
         this.fontScale = LauncherUtils.getFontScale(context);
         this.baseTextSizePx = context.getResources().getDimension(R.dimen.app_name_size);
         // A cor vem aqui, e não de ThemeHelper.paint(): as linhas nascem quando
@@ -136,6 +140,9 @@ public final class RecentListAdapter extends RecyclerView.Adapter<RecentListAdap
             dismiss.setTextColor(textColor);
             dismiss.setTypeface(FontCombo.getInterfaceFont(dismiss.getContext()));
             dismiss.setAlpha(0.7f);
+            // Sem isto o leitor de tela anuncia o glifo pelo nome: "multiplicação".
+            dismiss.setContentDescription(
+                    dismiss.getContext().getString(R.string.recent_dismiss_description));
             applyDismissSide(holder);
             dismiss.setOnClickListener(v -> {
                 if (callback != null) {
@@ -147,7 +154,11 @@ public final class RecentListAdapter extends RecyclerView.Adapter<RecentListAdap
             });
         }
 
-        name.setOnClickListener(v -> {
+        // O clique é na LINHA, não no nome: com uma mão só, exigir que o dedo
+        // acerte o texto e não o espaço vazio ao lado seria exigir precisão que
+        // o polegar não tem. O X consome o toque dele porque é clicável e fica
+        // por cima do listener da linha.
+        holder.row.setOnClickListener(v -> {
             if (callback == null) {
                 return;
             }
@@ -169,7 +180,7 @@ public final class RecentListAdapter extends RecyclerView.Adapter<RecentListAdap
      */
     private void applyDismissSide(@NonNull ViewHolder holder) {
         LinearLayout row = holder.row;
-        int wantedIndex = dismissOnStart ? 0 : 1;
+        int wantedIndex = dismissOnEnd ? 1 : 0;
         if (row.getChildAt(wantedIndex) == holder.dismiss) {
             return;
         }

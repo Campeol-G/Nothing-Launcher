@@ -5,75 +5,65 @@ import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
- * A regra que decide se um app aparece na tela de recentes.
+ * O que a tela faz com a lista de apps abertos depois que o sistema a devolveu.
  *
- * <p>Estes testes existem porque a falha deles é invisível: se a comparação de
- * dispensa estiver errada, a tela simplesmente mostra a lista errada, e nada
- * aparece em log nenhum. Por isso a regra ficou numa classe sem Android.
+ * <p>Antes a ordem era montada aqui, a partir do histórico de uso, e a dispensa
+ * guardava o instante para o app voltar sozinho. As duas coisas caem fora: a ordem
+ * agora é a do sistema, e dispensar é decisão da pessoa — se ela mandou tirar, o
+ * app fica fora até ela mandar de volta.
  */
 public class RecentRankerTest {
 
-    private static RecentRanker.Use use(String pkg, long when) {
-        return new RecentRanker.Use(pkg, when);
+    private static Set<String> dismissed(String... packages) {
+        return new LinkedHashSet<>(Arrays.asList(packages));
     }
 
-    private static List<String> packagesOf(List<RecentRanker.Use> uses) {
-        List<String> out = new ArrayList<>();
-        for (RecentRanker.Use u : uses) {
-            out.add(u.packageName);
-        }
-        return out;
+    @Test public void mantemAOrdemDoSistema() {
+        List<String> result = RecentRanker.apply(
+                Arrays.asList("com.discord", "com.android.chrome", "com.whatsapp"),
+                Collections.emptySet());
+        assertEquals(Arrays.asList("com.discord", "com.android.chrome", "com.whatsapp"), result);
     }
 
-    @Test public void ordenaDoMaisRecenteParaOMaisAntigo() {
-        List<RecentRanker.Use> result = RecentRanker.rank(
-                Arrays.asList(use("a", 100L), use("b", 300L), use("c", 200L)),
-                Collections.emptyMap());
-        assertEquals(Arrays.asList("b", "c", "a"), packagesOf(result));
+    @Test public void escondeODispensado() {
+        List<String> result = RecentRanker.apply(
+                Arrays.asList("com.discord", "com.android.chrome", "com.whatsapp"),
+                dismissed("com.android.chrome"));
+        assertEquals(Arrays.asList("com.discord", "com.whatsapp"), result);
     }
 
-    @Test public void pacoteComVariasTasksApareceUmaVezComOTimeMaisNovo() {
-        // O UsageStatsManager devolve um evento por task, nao por app: sem dedup
-        // o mesmo nome aparece varias vezes e o X age na task errada.
-        List<RecentRanker.Use> result = RecentRanker.rank(
-                Arrays.asList(use("a", 100L), use("a", 900L), use("a", 400L)),
-                Collections.emptyMap());
-        assertEquals(1, result.size());
-        assertEquals(900L, result.get(0).lastTimeUsed);
+    @Test public void esconderUmNaoMexeNosOutros() {
+        List<String> result = RecentRanker.apply(
+                Arrays.asList("com.a", "com.b", "com.c"),
+                dismissed("com.b"));
+        assertEquals(Arrays.asList("com.a", "com.c"), result);
     }
 
-    @Test public void dispensaVigenteEscondeOApp() {
-        // dismissedAt igual a lastTimeUsed esconde: foi dispensado agora.
-        List<RecentRanker.Use> result = RecentRanker.rank(
-                Arrays.asList(use("a", 500L)),
-                Collections.singletonMap("a", 500L));
-        assertTrue(result.isEmpty());
+    @Test public void dispensadoVoltaQuandoSomeDaDispensa() {
+        // O contrafluxo do "limpar tudo": nada é mais descartado, então tudo volta.
+        List<String> result = RecentRanker.apply(
+                Arrays.asList("com.a", "com.b"),
+                Collections.emptySet());
+        assertEquals(Arrays.asList("com.a", "com.b"), result);
     }
 
-    @Test public void appReabertoDepoisVoltaSozinho() {
-        // dismissedAt menor que lastTimeUsed: o app foi usado de novo depois de
-        // dispensado, entao o historico manda e ele volta, sem nenhuma acao.
-        List<RecentRanker.Use> result = RecentRanker.rank(
-                Arrays.asList(use("a", 900L)),
-                Collections.singletonMap("a", 500L));
-        assertEquals(1, result.size());
-        assertEquals("a", result.get(0).packageName);
-    }
-
-    @Test public void dispensaDeUmAppNaoAfetaOutro() {
-        List<RecentRanker.Use> result = RecentRanker.rank(
-                Arrays.asList(use("a", 500L), use("b", 500L)),
-                Collections.singletonMap("a", 500L));
-        assertEquals(Arrays.asList("b"), packagesOf(result));
+    @Test public void pacoteRepetidoApareceUmaVezNaPosicaoMaisRecente() {
+        // A lista crua pode vir com o mesmo pacote duas vezes (duas tasks). A
+        // primeira ocorrência é a task mais recente, que é a que a pessoa quer.
+        List<String> result = RecentRanker.apply(
+                Arrays.asList("com.a", "com.b", "com.a", "com.c"),
+                Collections.emptySet());
+        assertEquals(Arrays.asList("com.a", "com.b", "com.c"), result);
     }
 
     @Test public void listaVaziaDevolveListaVazia() {
-        assertTrue(RecentRanker.rank(Collections.emptyList(), Collections.emptyMap()).isEmpty());
+        assertTrue(RecentRanker.apply(Collections.emptyList(), Collections.emptySet()).isEmpty());
     }
 }

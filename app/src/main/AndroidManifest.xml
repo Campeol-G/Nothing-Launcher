@@ -7,23 +7,13 @@
         android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
 
-    <!--
-      Acesso a dados de uso: a origem da lista de apps recentes.
-
-      Permissão de acesso especial, não de runtime — o Android não mostra diálogo
-      para ela. O usuário liga em Configurações → Aplicativos → Minimal Launcher
-      → Uso de dados → Acesso a dados de uso, e a tela da lista diz isso quando
-      falta. Sem ela a lista fica vazia, e nenhum crash.
-    -->
-    <uses-permission
-        android:name="android.permission.PACKAGE_USAGE_STATS"
-        tools:ignore="ProtectedPermissions" />
-
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
+        <!-- Para o aviso da tela de recentes abrir a página do Shizuku. -->
+        <package android:name="moe.shizuku.privileged.api" />
         <intent>
             <action android:name="android.intent.action.DELETE" />
             <data android:scheme="package" />

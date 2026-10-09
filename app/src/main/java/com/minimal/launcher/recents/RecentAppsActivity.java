@@ -43,13 +43,15 @@ public final class RecentAppsActivity extends AppCompatActivity
         implements RecentListAdapter.Callback, RecentAppsSource.Callback {
 
     /**
-     * Não precisa de Context, então pode ser campo.
-     *
-     * <p>O {@link DismissedStore} é o contrário: {@code new DismissedStore(this)}
-     * em inicializador de campo rodaria antes de o Context ser anexado à activity,
-     * e {@code getApplicationContext()} devolveria null. Ele é criado no onCreate.
+     * O {@link DismissedStore} e o {@link ShizukuTaskKiller} são criados no
+     * onCreate, não em inicializador de campo: um inicializador roda antes de o
+     * Context ser anexado à activity, e o {@code getApplicationContext()} do store
+     * devolveria null.
      */
-    private TaskKiller killer;
+    /** O app do Shizuku, para o aviso levar direto à tela dele. */
+    private static final String SHIZUKU_PACKAGE = "moe.shizuku.privileged.api";
+
+    private ShizukuTaskKiller killer;
     private DismissedStore dismissedStore;
 
     private RecyclerView list;
@@ -98,7 +100,6 @@ public final class RecentAppsActivity extends AppCompatActivity
         // mesmo tratamento: fonte e cor em runtime, como o adapter faz.
         hint.setTypeface(FontCombo.getInterfaceFont(this));
         hint.setTextColor(ThemeHelper.getHomeForegroundColor(this));
-        hint.setAlpha(0.7f);
     }
 
     @Override
@@ -107,30 +108,34 @@ public final class RecentAppsActivity extends AppCompatActivity
         // Reler a cada volta: a lista é do sistema, e o uso dos últimos minutos é
         // justamente o que muda enquanto a tela está fechada.
         final int token = ++loadToken;
-        RecentAppsSource.loadAsync(this, (entries, permissionMissing) -> {
+        // O consentimento entra assim que a tela abre, não no primeiro X: quem
+        // quer a lista inteira precisa saber da dependência antes de tocar em
+        // qualquer coisa.
+        killer.requestPermission();
+        RecentAppsSource.loadAsync(this, (entries, shizukuMissing) -> {
             // Uma leitura que já não é a atual não repõe nada: senão ela traz de
             // volta a linha que o X acabou de tirar, e o botão parece quebrado.
             if (token != loadToken || isFinishing() || isDestroyed()) {
                 return;
             }
-            onLoaded(entries, permissionMissing);
+            onLoaded(entries, shizukuMissing);
         });
     }
 
     // -------------------------------------------------------------- lista
 
     @Override
-    public void onLoaded(@NonNull List<AppEntry> entries, boolean permissionMissing) {
+    public void onLoaded(@NonNull List<AppEntry> entries, boolean shizukuMissing) {
         if (isFinishing() || isDestroyed()) {
             return;
         }
-        if (permissionMissing) {
-            // Sem permissão, a lista velha não vale nada: escondê-la, senão a
-            // pessoa lê "nada foi usado" e a instrução ao mesmo tempo.
+        if (shizukuMissing) {
+            // Sem Shizuku não há lista de tasks, e a lista velha não vale nada:
+            // escondê-la, senão a pessoa lê "nada aberto" e o aviso ao mesmo tempo.
             shown.clear();
             adapter.setItems(new ArrayList<>());
             list.setVisibility(View.GONE);
-            showHint(R.string.recent_usage_permission_hint, true);
+            showHint(R.string.recent_shizuku_required, this::openShizuku);
             return;
         }
         shown.clear();
@@ -146,7 +151,7 @@ public final class RecentAppsActivity extends AppCompatActivity
         // Lista vazia é estado real: nada usado na janela. E ela não é acionável,
         // então não finge ser botão.
         if (shown.isEmpty()) {
-            showHint(R.string.recent_empty, false);
+            showHint(R.string.recent_empty, null);
         } else {
             hideHint();
         }
@@ -156,10 +161,13 @@ public final class RecentAppsActivity extends AppCompatActivity
      * @param actionable há algo a fazer? Então a linha abre algo. Uma linha só
      *                   informativa não pode abrir a tela errada.
      */
-    private void showHint(int text, boolean actionable) {
+    private void showHint(int text, @Nullable Runnable action) {
         hint.setText(text);
-        hint.setClickable(actionable);
-        hint.setOnClickListener(actionable ? v -> openUsageSettings() : null);
+        hint.setClickable(action != null);
+        hint.setOnClickListener(action == null ? null : v -> action.run());
+        // Esmaecida só quando é informação. Quando há algo a fazer, a linha é a
+        // única instrução da tela e esmaecer a esmaece.
+        hint.setAlpha(action != null ? 1f : 0.7f);
         hint.setVisibility(View.VISIBLE);
     }
 
@@ -170,18 +178,19 @@ public final class RecentAppsActivity extends AppCompatActivity
     }
 
     /**
-     * Abrir as configurações do app é a única forma de chegar na permissão.
+     * Abrir o Shizuku é a única forma de a tela ter lista.
      *
-     * <p>Uso de dados não tem diálogo do sistema: o usuário tem que ir lá e ligar.
-     * A linha de texto é o mesmo estilo das outras, então apontar para as
-     * configurações é um toque nela, e não um botão com cara de botão.
+     * <p>Não há como ler as tasks de um app de terceiro sem ele. A linha de texto é
+     * o mesmo estilo das outras, então apontar para o Shizuku é um toque nela, e não
+     * um botão com cara de botão.
      */
-    private void openUsageSettings() {
+    private void openShizuku() {
         try {
-            startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+            startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                    .setData(android.net.Uri.parse("package:" + SHIZUKU_PACKAGE))
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         } catch (RuntimeException noSuchScreen) {
-            // ROM sem essa tela de configurações: a linha de texto já diz onde está.
+            // ROM sem essa tela de configurações: a linha de texto já diz o que fazer.
         }
     }
 
@@ -201,10 +210,10 @@ public final class RecentAppsActivity extends AppCompatActivity
 
     @Override
     public void onDismiss(@NonNull AppEntry entry, int position) {
-        // A dispensa vai primeiro: ela é o que faz o app não voltar na próxima
-        // vez que a tela abrir, e é ela que sobrevive à falta de Shizuku.
-        // Encerrar é o que vem depois, e pode não acontecer.
-        dismissedStore.dismiss(entry.packageName, System.currentTimeMillis());
+        // A dispensa vai primeiro: ela é o que tira o app da lista, e é ela que
+        // sobrevive à falta de Shizuku. Encerrar é o que vem depois, e pode não
+        // acontecer — o app continua aberto, que é o que o X promete.
+        dismissedStore.dismiss(entry.packageName);
         shown.remove(entry);
         adapter.removeAt(position);
         killOffMainThread(() -> killer.kill(entry.packageName));
@@ -239,7 +248,8 @@ public final class RecentAppsActivity extends AppCompatActivity
                 return;
             }
             if (!killer.isAvailable()) {
-                showHint(R.string.recent_shizuku_missing, false);
+                // Saíram da lista mas seguem rodando: é o que o X promete.
+                showHint(R.string.recent_shizuku_missing, null);
             }
         });
     }
