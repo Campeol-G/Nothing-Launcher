@@ -68,6 +68,8 @@ public final class SearchActivity extends AppCompatActivity implements AppMenu.L
 
     /** O teclado ja esteve visivel nesta tela? Antes disso, ele nao "sumiu". */
     private boolean keyboardSeen;
+    /** A tela já está saindo. Dois caminhos podem pedir a saída quase juntos. */
+    private boolean saindo;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -93,6 +95,13 @@ public final class SearchActivity extends AppCompatActivity implements AppMenu.L
         int subdued = ThemeHelper.getSearchPlaceholderColor(this);
 
         ThemeHelper.paint(this, root, true);
+
+        // A tela sobe de baixo, como quem puxa uma gaveta. Sem isto, ela aparecia de
+        // repente no meio de um gesto: o dedo subia e a tela simplesmente estava la.
+        // Rotação não repete a animação — a tela já estava lá antes.
+        if (savedInstanceState == null) {
+            SlideAnimation.entrarDeBaixo(root);
+        }
 
         searchBar.setBackground(ThemeHelper.createRoundedRectDrawable(this,
                 ThemeHelper.getSearchBackgroundColor(this),
@@ -132,7 +141,17 @@ public final class SearchActivity extends AppCompatActivity implements AppMenu.L
         // gesto do sistema nao entra aqui — ela existe para o arrasto para cima,
         // que disputa o home. Quem preferir nao usar gesto algum tem o botao
         // voltar do sistema e o Enter do teclado.
-        root.setEdgeGesture(EdgeGestureLayout.DIRECTION_DOWN, null, this::finish);
+        root.setEdgeGesture(EdgeGestureLayout.DIRECTION_DOWN, null, this::fecharDeslizando);
+
+        // O botão voltar do sistema fecha a activity na hora, sem passar pela
+        // animação. Aqui ele passa pelo mesmo caminho dos outros dois.
+        getOnBackPressedDispatcher().addCallback(this,
+                new androidx.activity.OnBackPressedCallback(true) {
+                    @Override
+                    public void handleOnBackPressed() {
+                        fecharDeslizando();
+                    }
+                });
 
         // Na busca o gesto horizontal abre a tela de apps recentes. O custo: o
         // arrasto que fecharia a busca indo para tras vira "abrir recentes". Fechar
@@ -292,7 +311,26 @@ public final class SearchActivity extends AppCompatActivity implements AppMenu.L
         if (!keyboardSeen || !resumed || !hasWindowFocus()) {
             return;
         }
-        finish();
+        fecharDeslizando();
+    }
+
+    /**
+     * Fecha a tela descendo, e só então fechando de verdade.
+     *
+     * <p>Todos os caminhos de saída passam por aqui: o botão voltar, o arrasto para
+     * baixo e o teclado sumindo. A animação tem que ser a última coisa a acontecer
+     * antes do {@code finish}, senão o Android corta a tela no meio do deslize.
+     *
+     * <p>A guarda existe porque dois caminhos podem pedir a saída quase juntos — o
+     * botão voltar primeiro esconde o teclado, e o sumiço do teclado também pede
+     * para fechar. Sem ela, a tela animationava duas vezes.
+     */
+    private void fecharDeslizando() {
+        if (saindo) {
+            return;
+        }
+        saindo = true;
+        SlideAnimation.sairParaBaixo(root, this::finish);
     }
 
     // -------------------------------------------------------------- resultado

@@ -6,8 +6,6 @@ import android.os.Bundle;
 import android.util.TypedValue;
 import android.provider.Settings;
 import android.view.View;
-import android.view.animation.AccelerateInterpolator;
-import android.view.animation.DecelerateInterpolator;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -20,6 +18,7 @@ import com.minimal.launcher.FontCombo;
 import com.minimal.launcher.LauncherUtils;
 import com.minimal.launcher.Prefs;
 import com.minimal.launcher.R;
+import com.minimal.launcher.SlideAnimation;
 import com.minimal.launcher.ThemeHelper;
 import com.minimal.launcher.apps.AppEntry;
 import com.minimal.launcher.apps.AppRepository;
@@ -68,10 +67,6 @@ public final class RecentAppsActivity extends AppCompatActivity
     private static final int LADO_NENHUM = 0;
     private static final int LADO_DA_ESQUERDA = 1;
     private static final int LADO_DA_DIREITA = 2;
-
-    /** Animação curta. Mais que isso e o gesto parece esperar. */
-    private static final long DURACAO_ENTRADA_MS = 200L;
-    private static final long DURACAO_SAIDA_MS = 170L;
 
     /**
      * O intent que abre a tela vinda de um arrasto.
@@ -296,14 +291,9 @@ public final class RecentAppsActivity extends AppCompatActivity
         if (lado == LADO_NENHUM) {
             return;
         }
-        root.setTranslationX(lado == LADO_DA_ESQUERDA ? -larguraDaTela() : larguraDaTela());
-        root.setAlpha(0f);
-        root.animate()
-                .translationX(0f)
-                .alpha(1f)
-                .setDuration(DURACAO_ENTRADA_MS)
-                .setInterpolator(new DecelerateInterpolator(1.6f))
-                .start();
+        SlideAnimation.entrarDoLado(root,
+                lado == LADO_DA_ESQUERDA
+                        ? SlideAnimation.LADO_ESQUERDO : SlideAnimation.LADO_DIREITO);
     }
 
     /**
@@ -313,19 +303,7 @@ public final class RecentAppsActivity extends AppCompatActivity
      * dedo vai para a direita e a tela vai com ele.
      */
     private void sairParaO(int direcao) {
-        root.animate()
-                .translationX(direcao == EdgeGestureLayout.DIRECTION_RIGHT
-                        ? larguraDaTela() : -larguraDaTela())
-                .alpha(0f)
-                .setDuration(DURACAO_SAIDA_MS)
-                .setInterpolator(new AccelerateInterpolator(1.6f))
-                .withEndAction(this::finish)
-                .start();
-    }
-
-    private float larguraDaTela() {
-        return root.getWidth() > 0 ? root.getWidth()
-                : getResources().getDisplayMetrics().widthPixels;
+        SlideAnimation.sairParaOLado(root, direcao, this::finish);
     }
 
     /** O pé da tela chama isto. Não vem do adapter: o botão saiu da lista. */
