@@ -194,7 +194,8 @@ O enter não exige o nome completo. O ranqueamento está em
 [`apps/AppSearch.java`](app/src/main/java/com/minimal/launcher/apps/AppSearch.java),
 é puro e não tem nada de Android: nome igual, nome que começa com o texto, uma
 palavra do nome que começa com o texto, nome que contém o texto e, por último, o
-texto aparecendo na ordem pulando letras — `tk` acha TikTok, `gmb` acha Gmail.
+texto aparecendo na ordem pulando letras — `tk` acha TikTok, `gmb` acha Gaming
+Hub. Qual app vence no fim depende do que está instalado no aparelho.
 
 A tela e o enter usam **o mesmo** ranqueamento: o que está escrito na tela é o que
 o enter abre, inclusive quando a busca não achou nada — nesse caso a tela diz

@@ -39,7 +39,9 @@ instale ainda.
 
 ![Tela inicial](images/homescreen11.png)
 
-**Busca** — um resultado por vez, com o resto em cima ou embaixo.
+**Busca** — o app que melhor responde ao texto, logo acima do teclado, e quantos
+outros ficaram de fora. O ranqueamento aceita o nome pela metade: `gmb` acha
+*Gaming Hub*, `tk` acha TikTok.
 
 ![Busca](images/searchScreen11.png)
 
@@ -53,6 +55,11 @@ São 11 combinações de fundo e texto, definidas em [`colors.md`](colors.md) e
 [`searchScreen.md`](searchScreen.md). Trocar de cor é em *Configurações → Cor de
 fundo*. O fundo da tela **é** a cor escolhida — não existe wallpaper.
 
+As oito telas abaixo foram tiradas no aparelho de verdade. Uma ressalva: a combo
+**11 (Preto OLED) só é preta à noite**. De dia o app troca o OLED por off-white
+porque preto sob luz do sol é desconfortável — e de dia ela fica idêntica à 10.
+Por isso as fotos da 11 são noturnas, e as da 10 são diurnas.
+
 | Cor | Inicial | Busca | Recentes |
 |---|---|---|---|
 | 1. Creme + Marrom | [inicial](images/homescreen1.png) | [busca](images/searchScreen1.png) | [recentes](images/activitScreen1.png) |
@@ -63,6 +70,9 @@ fundo*. O fundo da tela **é** a cor escolhida — não existe wallpaper.
 | 9. Azul céu + Azul petróleo | [inicial](images/homescreen9.png) | [busca](images/searchScreen9.png) | [recentes](images/activitScreen9.png) |
 | 10. Off-white + Preto suave | [inicial](images/homescreen10.png) | [busca](images/searchScreen10.png) | [recentes](images/activitScreen10.png) |
 | 11. Preto OLED (padrão) | [inicial](images/homescreen11.png) | [busca](images/searchScreen11.png) | [recentes](images/activitScreen11.png) |
+
+As prints se tiram de novo com `./shots.sh`, e `conferir_cores.py` mede a cor de
+cada arquivo e compara com a paleta — um print de cor errada passaria batido.
 
 ---
 
