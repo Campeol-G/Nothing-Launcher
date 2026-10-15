@@ -1,425 +1,220 @@
-# Minimal Launcher
+# Nothing Launcher
 
-Launcher Android nativo de uso pessoal. Uma tela, sem ícones, sem widgets, sem
-páginas extras, sem animação de transição. Fundo sólido desenhado pelo app
-(nunca o wallpaper do sistema) e uma lista de favoritos que cabe na tela, sem
-rolagem.
+Launcher Android de tela única: sem ícones, sem widgets, sem páginas. Fundo sólido,
+o relógio em cima, uma lista de favoritos embaixo. E uma tela à parte com os apps
+abertos no sistema, só em texto.
 
-O nome é provisório: está em `app/src/main/res/values/strings.xml` → `app_name`,
-e o `applicationId` está em `app/build.gradle`.
+Roda em Android 8.0 ou superior.
 
-## Requisitos
+---
+
+## Alpha. Leia isto antes de instalar
+
+Isto é software de uso pessoal, em construção. Não está na Play Store e não tem
+versão assinada.
+
+O que isso significa na prática:
+
+- **Foi testado em um aparelho só** — um Samsung com Android 13. Não há teste em
+  outras marcas nem em outras versões do Android.
+- **A tela de apps recentes depende do Shizuku** e de um comando de shell
+  (`dumpsys`) cujo formato de saída não é uma API estável. Ela pode deixar de
+  funcionar numa atualização de ROM. Não quebrou ainda, mas é o ponto mais frágil
+  do app.
+- **O Shizuku morre a cada reinício do aparelho** e precisa ser ligado de novo
+  por ADB. Sem ele, a tela de recentes mostra um aviso e as outras duas telas
+  funcionam normal.
+- **Não há teste automático de interface.** São 20 testes de lógica pura (parser
+  da lista, ranqueamento, guarda do "não se mate"). O resto — o visual, os gestos —
+  foi verificado à mão em um aparelho, e é o que pode surprising te.
+
+Se você perde o aparelho de vez por usar isso como launcher principal, não
+instale ainda.
+
+---
+
+## Telas
+
+**Inicial** — o relógio, a data e os favoritos.
+
+![Tela inicial](images/homescreen11.png)
+
+**Busca** — um resultado por vez, com o resto em cima ou embaixo.
+
+![Busca](images/searchScreen11.png)
+
+**Apps recentes** — os apps abertos no sistema, em texto, com um X por linha.
+
+![Apps recentes](images/activitScreen11.png)
+
+### As cores
+
+São 11 combinações de fundo e texto, definidas em [`colors.md`](colors.md) e
+[`searchScreen.md`](searchScreen.md). Trocar de cor é em *Configurações → Cor de
+fundo*. O fundo da tela **é** a cor escolhida — não existe wallpaper.
+
+| Cor | Inicial | Busca | Recentes |
+|---|---|---|---|
+| 1. Creme + Marrom | [inicial](images/homescreen1.png) | [busca](images/searchScreen1.png) | [recentes](images/activitScreen1.png) |
+| 2. Bege + Marrom escuro | [inicial](images/homescreen2.png) | [busca](images/searchScreen2.png) | [recentes](images/activitScreen2.png) |
+| 3. Cinza claro + Grafite | [inicial](images/homescreen3.png) | [busca](images/searchScreen3.png) | [recentes](images/activitScreen3.png) |
+| 4. Aço + Grafite frio | [inicial](images/homescreen4.png) | [busca](images/searchScreen4.png) | [recentes](images/activitScreen4.png) |
+| 6. Areia + Marrom | [inicial](images/homescreen6.png) | [busca](images/searchScreen6.png) | [recentes](images/activitScreen6.png) |
+| 9. Azul céu + Azul petróleo | [inicial](images/homescreen9.png) | [busca](images/searchScreen9.png) | [recentes](images/activitScreen9.png) |
+| 10. Off-white + Preto suave | [inicial](images/homescreen10.png) | [busca](images/searchScreen10.png) | [recentes](images/activitScreen10.png) |
+| 11. Preto OLED (padrão) | [inicial](images/homescreen11.png) | [busca](images/searchScreen11.png) | [recentes](images/activitScreen11.png) |
+
+---
+
+## Para rodar
+
+### O que precisa
 
 | Item | Versão |
 |---|---|
-| JDK | 17+ (o build foi feito com 27) |
-| Android SDK | platform **android-37.0** (Android 17) e build-tools 36 |
-| Gradle | 9.8 |
-| AGP | 9.4.1 |
-| minSdk | 26 (Android 8.0) |
-| targetSdk | 37 |
+| JDK | 17 ou superior (o build foi feito com 27) |
+| Android SDK | platform **android-37** e build-tools compatível |
+| Gradle | 9.8 ou superior |
 
-## Compilar
-
-O `local.properties` desta máquina aponta para `/home/chico/Android/Sdk`. Se o SDK
-estiver em outro lugar, edite a linha `sdk.dir`.
+O repositório **não tem o `gradlew`**. Use o Gradle da sua máquina:
 
 ```bash
 cd ~/Projects/launcher
-
-# APK de depuração
 gradle assembleDebug
 # → app/build/outputs/apk/debug/app-debug.apk
-
-# Versão assinada (precisa de uma chave; rode release depois)
-gradle assembleRelease
 ```
 
-Instalar direto pelo terminal:
+Se o SDK não estiver no caminho padrão, crie/edite `local.properties` na raiz:
+
+```properties
+sdk.dir=/caminho/do/seu/Android/Sdk
+```
+
+### Instalar
 
 ```bash
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-## Definir como launcher padrão
+### Definir como launcher padrão
 
-Depois de instalado:
-
-1. Toque e segure em qualquer área vazia da tela inicial → **Busca**.
-   Para as **Configurações**, toque e segure no relógio ou na data.
-   (Se ainda não for o launcher, abra o app pelo ícone no drawer do sistema.)
-2. Ou: **Configurações do sistema → Apps → Aplicativo de início padrão**.
-   Em Android 12+: **Configurações → Apps → Apps padrão → App de início**.
-3. Escolha **Minimal Launcher**.
-
-Atalho pelo terminal:
+Pelo terminal:
 
 ```bash
 adb shell cmd package set-home-activity com.minimal.launcher/.HomeActivity
 ```
 
-Como o app também responde a `android.intent.action.APPLICATION_PREFERENCES`,
-alguns aparelhos mostram um atalho extra nas Configurações do sistema.
+Ou pelo aparelho: **Configurações → Apps → Apps padrão → App de início →
+Nothing Launcher**.
 
-## Permissões
+---
 
-Nenhuma. O app não pede acesso a notificações nem usa serviço de
-acessibilidade, e nada disso é opcional — simplesmente não existe.
+## Shizuku: obrigatório para a tela de apps recentes
 
-As notificações continuam funcionando normalmente: elas são tratadas pelo
-sistema. O launcher apenas esconde as barras e deixa o usuário puxá-las quando
-quiser, e é aí que as notificações aparecem como sempre.
+Um app comum não consegue ver os apps abertos no sistema. Android não dá essa
+informação — nem para o launcher anterior, nem para o seu. O Shizuku empresta os
+privilégios de shell do sistema para o app, e é com ele que a lista é montada.
 
-## Como usar
+**Sem Shizuku, nada quebra**: a tela inicial, a busca e as configurações funcionam
+igual. A tela de recentes mostra um aviso explicando o que falta.
 
-| Gesto / ação | Resultado |
+Como instalar:
+
+1. Baixe o [Shizuku](https://github.com/RikkaApps/Shizuku/releases) (arquivo
+   `.apk`) e instale.
+2. **Ative a depuração por USB** (ou depuração sem fio, em *Opções do
+   desenvolvedor*).
+3.ligue o Shizuku por ADB. Sem wireless debugging, o caminho é o do APK
+   `start.sh` que vem na mesma página de releases; com ele, é `adb shell` rodando
+   o binário do próprio app instalado.
+4. Abra o Shizuku, autorize o Nothing Launcher, e volte ao launcher.
+
+O passo 3 muda conforme a versão do Shizuku e o Android. Se ele falhar, a saída do
+comando costuma dizer por quê.
+
+**Depois de reiniciar o aparelho, repita o passo 3.** O Shizuku não sobrevive ao
+boot.
+
+---
+
+## Gestos
+
+| Gesto | Resultado |
 |---|---|
 | Tocar no nome | Abre o app |
-| Toque longo no nome | Favoritar / Remover dos favoritos, Informações do app, Desinstalar |
+| Toque longo no nome | Favoritar, informações do app, desinstalar |
 | Toque longo na área vazia | Abre a busca |
-| Toque longo no relógio ou na data | Abre as Configurações |
-| Na busca: digitar | Mostra **um** app só, o que melhor responde ao texto, e quantos outros ficaram de fora |
-| Na busca: tocar no resultado, ou enter | Abre esse app — inclusive com o texto pela metade: `tk` abre o TikTok |
-| Na busca: deslizar para baixo ou voltar | Fecha a busca |
-| Na busca: o teclado sumir | Fecha a busca: sem teclado não há busca |
-| Na tela de recentes: tocar no nome | Abre o app |
-| Na tela de recentes: tocar no X | Tira o app da lista e tenta encerrá-lo |
-| Na tela de recentes: tocar em "Limpar tudo" | Esvazia a lista e tenta encerrar tudo |
-| Na tela de recentes: deslizar para baixo ou voltar | Fecha |
+| Toque longo no relógio ou na data | Abre as configurações |
+| Arrastar para cima, de baixo para cima | Abre a busca |
+| Arrastar para o lado, da borda para dentro | Abre a tela de apps recentes |
+| Arrastar para baixo | Fecha a tela de busca e a de recentes |
+| Arrastar para o lado inverso, na tela de recentes | Fecha a tela |
 
-### Por que o arrasto para cima não colide com o sistema
+O arrasto para o lado corre **na direção da sua mão dominante** (padrão: da
+esquerda para a direita) e só vale quando **começa na faixa da borda**, uns 48dp.
+No meio da tela ele não existe — ali é rolagem da lista. Percorre 10% da largura da
+tela, o que dá um arrasto curto de polegar.
 
-Com a navegação por gestos do Android, arrastar para cima a partir da borda
-inferior pertence ao sistema: é o gesto que abre o drawer, e é também o
-movimento que o polegar faz para alcançar a lista. Quando o launcher
-interceptava esse arrasto, **buscar e trocar de app viravam o mesmo gesto**.
+---
 
-O arrasto para cima continua existindo, mas só vale quando **começa acima** da
-faixa reservada ao sistema. A faixa é o maior valor entre o inset de gestos, o da
-barra de navegação e um piso de **48dp** — o inset reportado costuma medir só a
-barra, uns 24dp, e é menor que a área que o sistema trata como gesto. Medido no
-aparelho: a exclusão cobre os 126px de baixo, e o arrasto a partir de y=2280
-sobe.
+## O que ele pede ao sistema
 
-Acima da faixa não há disputa, porque o drawer do sistema só existe a partir da
-borda.
+Duas permissões, ambas no manifesto e nenhuma com diálogo:
 
-O **toque longo** na área vazia continua sendo o caminho que não depende de
-acertar o começo do arrasto. E as Configurações são um toque longo no relógio,
-que é uma região diferente da tela.
-
-Deslizar para baixo na busca continua fechando: essa puxada do sistema começa na
-borda superior, e o arrasto do app é decidido no meio da tela. Quem preferir não
-usar gesto algum tem o botão voltar do sistema e o Enter do teclado.
-
-A faixa reservada ao sistema **só vale para o arrasto para cima**. Ela existe
-porque esse arrasto disputa o gesto de ir para a casa; para descer não há
-disputa nenhuma, e a faixa ali só fazia o gesto ser descartado em silêncio.
-
-### Por que o deslizar para baixo não funcionava
-
-Numa tela sem lista e sem view clicável — que é o caso da busca — nenhum filho
-consome o `ACTION_DOWN`. Ele caía no layout e era devolvido como não tratado, e
-**o sistema, diante de um DOWN não tratado, para de entregar os eventos
-seguintes àquela janela**. O arrasto perdia o resto do toque antes de começar.
-
-Na tela inicial isso não aparecia: o `RecyclerView` consome o DOWN e segura o
-gesto inteiro, que é por isso que o arrasto para cima sempre funcionou. Em
-`EdgeGestureLayout.onTouchEvent` o DOWN agora é consumido pelo próprio layout
-quando mais ninguém o consome.
-
-Fechar uma tela também é um gesto curto, e o limite de percurso é menor que o de
-abrir: 48dp e 5% da altura para descer, 96dp e 8% para subir. Abrir a busca
-divide o gesto com o polegar rolando a lista, e ali o percurso longo evita
-disparo por engano.
-
-### O teclado é precondição da busca
-
-A tela de busca só existe com o teclado, e isso virou regra explícita em três
-lugares:
-
-1. **Ele sobe junto.** Não basta pedir `showSoftInput`: sem
-   `stateAlwaysVisible` no manifesto, o sistema responde ao pedido com
-   `Unspecified window will hide input` e esconde o teclado de novo. Medido no
-   aparelho antes e depois.
-2. **Ele volta se a janela ganhar foco**, porque o `showSoftInput` pedido antes
-   do foco da janela é descartado.
-3. **Se ele sumir depois de ter estado visível, a tela fecha.** Vale para o
-   botão voltar — que primeiro esconde o teclado — e para o gesto de descer no
-   próprio teclado. Duas guardas impedem que vire corrida: o teclado precisa ter
-   estado visível, e a activity precisa estar em primeiro plano com foco, senão
-   abrir um app (que também fecha o teclado) fecharia a busca junto.
-
-### Latência de entrada na busca
-
-Duas coisas levavam a primeira tecla a esperar quase um segundo, e as duas foram
-tiradas do caminho da digitação:
-
-- **A lista de apps era montada na main thread, na primeira tecla.** Ler todos os
-  apps instalados (`queryIntentActivities` + o rótulo de cada um) custa meio
-  segundo. Agora ela é montada numa thread própria, e o pedido da busca entra
-  nessa mesma fila: quem digita nunca espera, nem pela lista, nem pelo
-  ranqueamento.
-- **Cada tecla renormalizava ~200 rótulos**, com `replaceAll` compilando um regex
-  por rótulo. O rótulo normalizado passa a ser calculado uma vez, quando o app é
-  construído, e a busca virou comparação de string.
-
-A lista também é **pré-carregada** na inicialização do processo: o trabalho
-acontece enquanto a tela inicial está à vista, não quando o dedo já está
-digitando. E recarrega em segundo plano quando um app é instalado ou removido.
-Medido no aparelho: partida a frio do processo, digitando logo em seguida, o
-quadro mais longo foi de 87ms e a mediana de 11ms — antes, a thread principal
-ficava bloqueada por centenas de ms na primeira tecla.
-
-O teclado é pedido de imediato e repetido no primeiro desenho da tela, quando a
-janela já está pronta. Não há delay artificial: um `postDelayed` de 200ms que
-existia aqui custava 200ms de latência toda vez que alguém queria trocar de app,
-somados à espera do toque longo.
-
-### A busca acha o app com o texto pela metade
-
-O enter não exige o nome completo. O ranqueamento está em
-[`apps/AppSearch.java`](app/src/main/java/com/minimal/launcher/apps/AppSearch.java),
-é puro e não tem nada de Android: nome igual, nome que começa com o texto, uma
-palavra do nome que começa com o texto, nome que contém o texto e, por último, o
-texto aparecendo na ordem pulando letras — `tk` acha TikTok, `gmb` acha Gmail.
-
-A tela e o enter usam **o mesmo** ranqueamento: o que está escrito na tela é o que
-o enter abre, inclusive quando a busca não achou nada — nesse caso a tela diz
-`Nenhum app encontrado` e o enter não faz nada. A última regra exige dois
-caracteres no mínimo: com um só quase todo nome do aparelho casaria e a busca
-viraria loteria.
-
-### A fonte se ajusta ao aparelho
-
-A base é 22sp para os apps e 54sp para o relógio, e por cima dela há duas
-multiplicações, em `LauncherUtils`:
-
-1. **Automática, pela altura da tela** — uma referência de 800dp vale 1.0; uma
-   tela de 698dp recebe 1.15 (é nelas que 22sp parece pequeno); uma de 914dp
-   recebe 0.92, para o relógio não virar um outdoor. O limite é 0.92 a 1.30.
-2. **A preferência das Configurações** — os quatro passos multiplicam o
-   automático. Quem não mexe fica só no automático.
-
-Densidade de tela não entra no cálculo: sp já é independente de pixels, então o
-ajuste é sobre o *tamanho físico da tela*, não sobre a resolução.
-
-Girar o aparelho refaz a conta: a escala efetiva faz parte da assinatura de
-preferências da tela inicial, e uma rotação que a mude recria a activity.
-
-### O limite de favoritos
-
-A tela inicial mostra apenas o que cabe. O número é calculado a partir da altura
-da tela **e da escala tipográfica efetiva** — aumentar a fonte reduz o número de
-linhas, como deve ser. O teto é 5 e 14; na prática quase todo aparelho alto com
-fonte média chega nos 14, ocupando uns 75% da altura da tela. O resto é o bloco
-do relógio e o respiro em volta da lista, que é centralizada.
-
-Se preferir o bloco colado embaixo, é uma palavra em `HomeActivity`:
-`Gravity.CENTER_VERTICAL` → `Gravity.BOTTOM`.
-
-Favoritos que não cabem **não são apagados**: continuam guardados e aparecem na
-busca. Se a lista já estiver cheia, o toque longo avisa em vez de adicionar.
-
-Com poucos favoritos a tela parece vazia — isso é conteúdo, não layout: o
-primeiro uso semeia três apps (Configurações, Câmera, Telefone). Adicione mais
-pelo toque longo na busca.
-
-## Aparência
-
-Cores e fontes são combinações fechadas, definidas nos arquivos da raiz do
-projeto:
-
-| Arquivo | O que define |
+| Permissão | Para quê |
 |---|---|
-| `colors.md` | 10 combinações de fundo + texto da tela inicial |
-| `searchScreen.md` | Cores da tela de busca (fundo, texto, placeholder, borda) |
-| `fonts.md` | 8 combinações de fontes (interface, relógio, títulos) |
+| `QUERY_ALL_PACKAGES` | Ler a lista de apps instalados, para a busca e os favoritos |
+| `moe.shizuku.manager.permission.API_V23` | Poder pedir autorização ao Shizuku |
 
-Os dados vivem em `ColorCombo.java` e `FontCombo.java`. O valor em
-`CURRENT_COLOR_COMBO_INDEX` / `CURRENT_FONT_COMBO_INDEX` é o **padrão** quando o
-usuário nunca escolheu nada — mudar o número no código e recompilar já troca o
-visual inteiro do app. O mesmo também dá para fazer pelas Configurações, que é
-o jeito normal de usar.
+Não pede acesso a notificações, não usa serviço de acessibilidade, não usa
+serviço em segundo plano e não faz rede. Nada disso existe no app.
 
-O padrão de fábrica é o combo **11. Preto OLED**, porque o preto puro é o que
-uma tela OLED gasta menos e o que mais combina com um launcher de tela única.
+O launcher apenas esconde as barras do sistema e deixa você puxá-las quando
+quiser; as notificações continuam funcionando como sempre.
 
-Ele é também o único combo **escuro por natureza**, e por isso tem duas
-variantes: **à noite** é `#000000` puro; **de dia** é off-white (`#F2F0E9`).
-Preto sob luz do dia não é discomfortável, é escuro demais — e a busca recebe a
-mesma troca. Os outros dez combos são claros por definição, e a inversão noturna
-deles é que produz a versão escura.
+---
 
-Fora do OLED, a inversão noturna nega o canal RGB de cada cor: o fundo claro
-vira escuro e o texto escuro vira claro. O texto principal mantém contraste de
-**7:1 ou mais** em todas as combinações, de dia e de noite; o placeholder da
-busca é puxado em direção à cor de texto para não cair abaixo de 4.5:1.
+## O que ele ainda não faz
 
-### Uma armadilha que o código registra
+- **Não substitui a tela de recents do Android.** A tela de recents mora dentro do
+  SystemUI e não tem API pública para um app de terceiros substituir. Esta é uma
+  tela à parte.
+- **Não tem ícone, miniatura, imagem nem animação de transição.** Por projeto.
+- **Não sabe de app aberto por notificação ou link** — a lista é a de apps com tela
+  aberta, não histórico de uso.
+- **O gesto do sistema não é substituído.** Trocar o gesto oficial de recents por
+  este é o próximo alvo, e ainda não foi feito.
+- **Sem build assinado.** `assembleRelease` precisa de uma chave que não está no
+  repositório.
 
-`ThemeHelper.paint()` só alcança as views que **já existem** quando é chamado,
-no `onCreate`. As linhas do RecyclerView e as linhas criadas em código nas
-Configurações nascem depois, e ficariam com a cor do tema (`textColorPrimary`,
-quase preto) — invisíveis sobre um combo escuro. Por isso as duas classes
-recebem a cor no ponto onde criam a view: `AppListAdapter.onBindViewHolder` e
-`SettingsActivity.label()`.
-
-As fontes vivem em `res/font/` como `.ttf` e são carregadas por
-`ResourcesCompat`; se um recurso falhar, o combo cai na fonte do sistema em vez
-de quebrar a tela.
-
-## O bloco de hora e data
-
-A faixa de cima ocupa **28% da altura da tela** (`LauncherUtils.getHeaderHeightPx`),
-com folga sobre os 20% pedidos. Dentro dela ficam a data e o relógio.
-
-O relógio **não tem tamanho fixo**: usa `autoSize` com teto na altura disponível,
-e o `clock_size` saiu do `dimens.xml` por isso.
-
-### Os dois formatos do relógio
-
-Um horário de cinco caracteres esbarra na **largura** antes da altura: `18:02`
-ocupa cerca de 2.55 larguras de glifo, e sobra quase metade da faixa sem uso.
-Por isso existem dois formatos, ambos medidos no aparelho:
-
-| Formato | Fonte | Altura do relógio | Quando |
-|---|---|---|---|
-| **Empilhado** (padrão) | Roboto Flex | **~598px** (duas linhas de ~299) | Padrão. Duas linhas de dois dígitos: cada uma esbarra muito menos na largura |
-| **Linha única** | Roboto Condensed | ~579px | Quem prefere o horário numa linha só |
-
-A linha única só ficou grande com a fonte condensada: a Roboto Condensed é da
-mesma família da Flex, então o desenho continua coerente. Sem ela, o mesmo
-formato ficaria em ~370px.
-
-O `autoSize` divide a faixa por igual no formato empilhado e usa a faixa inteira
-na linha única, e sempre reduz antes de cortar o texto — vale para `9:41`,
-`18:02` e `6:02 PM`.
-
-Duas armadilhas do `TextView` que custaram tempo aqui, e que valem registrar:
-
-- `android:singleLine="true"` **também** liga `ellipsize=END` e
-  `horizontallyScrolling`. Com os dois, o `autoSize` deixa de encolher e o
-  horário aparece cortado como `19:...`. Só `android:maxLines="1"`, mais
-  `ellipsize="none"`.
-- O `LayoutParams` do `header` é de `FrameLayout`, não de `LinearLayout`, porque
-  quem decide essa classe é o **pai** — o `EdgeGestureLayout`. Passar a errada
-  estoura com `ClassCastException` dentro de `FrameLayout.onMeasure`, e o app não
-  abre. O compilador aceita, porque `setLayoutParams` recebe qualquer
-  `ViewGroup.LayoutParams`.
-
-### Os dois formatos da data
-
-| Formato | Exemplo |
-|---|---|
-| **Por extenso** (padrão) | `6 de outubro de 2026` |
-| **Numérica** | `06/10/2026` |
-
-O numérico respeita a ordem do país: `10/06/2026` nos EUA, `06/10/2026` no
-Brasil. O por extenso ocupa bem mais espaço, o que também ajuda a preencher a
-faixa.
-
-### Onde ficam essas escolhas
-
-Cor de fundo, fontes, mão dominante, formato do relógio, formato da data e
-tamanho da fonte. Tudo isso entra na assinatura de preferências da tela
-principal, e a mudança recria a activity.
-
-A lista de favoritos fica **logo abaixo do relógio**, com uma folga curta
-(`clock_list_gap`), e não centralizada na tela: o gravity é `top` e a distância
-vem de uma margem superior igual à altura do cabeçalho mais a folga.
+---
 
 ## Estrutura
 
 ```
 app/src/main/java/com/minimal/launcher/
-├── LauncherApp.java            Application: cache, favoritos iniciais, receptor de pacotes
-├── HomeActivity.java           tela principal: relógio + favoritos ancorados no polegar
-├── SearchActivity.java         busca, um resultado por vez
-├── EdgeGestureLayout.java      resolve o conflito gesto x scroll, e faz o DOWN
-│                               ser consumido quando ninguém mais consome
-├── ThemeHelper.java            cores, inversão noturna, edge-to-edge, barras, insets
-├── ColorCombo.java             as 10 combinações de cor
-├── FontCombo.java              as 8 combinações de fonte
-├── LauncherUtils.java          cálculo do limite de favoritos
-├── Prefs.java                  todas as preferências
-├── ClockFormatter.java         hora/data no formato do aparelho
-├── SystemTimeWatcher.java      ACTION_TIME_TICK e amigos
-├── apps/
-│   ├── AppEntry.java           app lançável (pacote, nome, componente, nome normalizado)
-│   ├── AppRepository.java      lista de apps, fila única, resolução dos apps padrão
-│   ├── AppSearch.java          ranqueamento da busca: puro, sem Android
-│   ├── FavoritesStore.java     ordem persistida dos favoritos
-│   ├── AppListAdapter.java     linha de app: só o nome
-│   ├── AppListCallback.java    interface de cliques
-│   ├── AppMenu.java            diálogo do toque longo
-│   └── PackageChangeReceiver.java
-├── recents/
-│   ├── RecentAppsActivity.java tela de apps recentes: só texto, com X
-│   ├── RecentAppsSource.java   histórico de uso do sistema → AppEntry
-│   ├── RecentRanker.java       ordem, dedup e dispensa: puro, sem Android
-│   ├── RecentListAdapter.java  linha com nome e X, espelhando a mão dominante
-│   ├── DismissedStore.java     pacote → instante da dispensa
-│   ├── TaskKiller.java         interface de encerrar, sem Android
-│   └── ShizukuTaskKiller.java  a implementação, como melhor esforço
-└── settings/
-    └── SettingsActivity.java
+├── HomeActivity.java        tela inicial: relógio + favoritos
+├── SearchActivity.java      busca
+├── EdgeGestureLayout.java   resolve o conflito entre gesto e rolagem
+├── ThemeHelper.java         cores, inversão noturna, insets
+├── ColorCombo.java          as 11 combinações de cor
+├── FontCombo.java           as 8 combinações de fonte
+├── Prefs.java               preferências
+├── apps/                    lista de apps, favoritos, busca
+├── recents/                 tela de apps recentes (lista real, via Shizuku)
+└── settings/                configurações
 ```
 
-A decisão de arquitetura e o porquê de cada escolha estão em
-[`docs/superpowers/specs/2026-10-05-minimal-launcher-design.md`](docs/superpowers/specs/2026-10-05-minimal-launcher-design.md).
+O porquê de cada decisão está em
+[`docs/superpowers/specs/`](docs/superpowers/specs/). As notas técnicas de cada
+armadilha encontrada estão em [`docs/notas-tecnicas.md`](docs/notas-tecnicas.md).
 
-## Bateria
+## Testes
 
-O app não declara nenhum serviço. Nenhum receptor está no manifesto. O relógio
-usa `ACTION_TIME_TICK` (broadcast do sistema, 1x por minuto) em vez de timer
-próprio, e a lista de apps é cacheada e invalidada só quando um pacote muda.
+```bash
+gradle :app:testDebugUnitTest    # 20 testes de lógica pura
+gradle :app:lintDebug            # análise estática
+```
 
-A fila de apps é uma thread só, com uma tarefa por vez, e ela é usada em três
-momentos: na inicialização do processo, quando um pacote muda e a cada tecla
-digitada. Todas as tarefas são curtas e nenhuma é periódica — nenhuma delas roda
-sozinha esperando por alguma coisa.
-
-## Fora do escopo, por decisão
-
-Ícones, widgets, pastas, root e publicação na Play Store.
-
-A tela de apps recentes é a terceira tela do app, e ela não conta como "múltiplas
-telas" neste sentido: é uma lista de consulta, não uma página de navegação, não
-tem pasta, não tem ícone e não muda a proposta minimalista. Ícones continuam fora
-de qualquer tela.
-
-## A tela de apps recentes
-
-Só texto: os nomes, em ordem de uso real, mais um X por linha. Sem ícone, sem
-miniatura do último momento, sem imagem nenhuma — a mesma proposta da tela
-inicial, e por isso o mesmo estilo de linha.
-
-**Ela não substitui a tela de recents do Android.** A tela de recents mora dentro
-do SystemUI e não tem API pública para um app de terceiros substituí-la. Esta é
-uma tela à parte, aberta por atalho do sistema (duplo toque no power, segurar
-volume, ou o gesto que a ROM oferecer). Interceptar o gesto de recents com um
-`AccessibilityService` é possível e foi considerado, mas o recents do sistema
-pisca antes da nossa tela, exige permissão de acessibilidade e quebra em
-atualização de ROM.
-
-**A lista vem do histórico do sistema, não do que passou pelo launcher.** É o
-`UsageStatsManager`, e por isso aparecem apps abertos por notificação, por link ou
-por outro launcher. O custo é a permissão de acesso a dados de uso, que não tem
-diálogo: liga-se em Configurações → Aplicativos → Minimal Launcher → Uso de
-dados. Sem ela a tela diz como conseguir, em vez de ficar vazia sem explicação —
-o sistema não avisa que faltou, devolve lista vazia e segue vivo.
-
-**O X significa sair da lista**, sempre, para qualquer app. Quando o app pode ser
-encerrado, ele também é; quando não pode, só sai. Um X que fizesse uma coisa
-nuns apps e outra nos demais seria pior do que nenhum X, porque o usuário não
-teria como saber qual é qual antes de tocar. Encerrar usa Shizuku, e é melhor
-esforço: sem ele a tela continua limpa, e o que não acontece é o encerramento.
-
-A dispensa guarda o **instante** em que o app foi tirado, não um flag. É essa
-comparação com o último uso que faz o app voltar sozinho quando é aberto de novo,
-e o que impede o "limpar tudo" de virar um apagão que o usuário não desfaz.
-
-A tela é registrada **sem `CATEGORY_LAUNCHER`**. É isso que a mantém fora da
-lista de apps e da busca, já que as duas listam o que tem essa categoria; o atalho
-do sistema a alcança por intent explícito, que não depende de filtro.
+Os testes cobrem o parser da lista de apps abertos, a regra de dispensa por
+instante e a guarda que impede o app de se encerrar. Não cobrem interface.
