@@ -47,8 +47,18 @@ public class EdgeGestureLayout extends FrameLayout {
      */
     private static final int SIDE_BAND_DP = 48;
 
-    /** Percurso minimo antes do gesto valer, em dp. */
-    private static final int SIDE_MIN_TRAVEL_DP = 56;
+    /**
+     * Percurso minimo do gesto horizontal, em dp. E o piso, nao a medida.
+     *
+     * <p>Quem manda e a porcentagem da largura (10%): ela da o mesmo gesto em
+     * qualquer aparelho. Este piso so protege a tela estreita, onde 10% dariam um
+     * arrasto curto demais para alguém acertar de proposito.
+     *
+     * <p>Era 18% da largura com piso de 56dp, e era longo demais: atravessar quase
+     * um quinto da tela com o dedo para abrir uma lista e um gesto de leitura, nao
+     * de comando. O que se pede aqui e um arrasto de polegar.
+     */
+    private static final int SIDE_MIN_TRAVEL_DP = 40;
 
     public interface OnEdgeGestureListener {
         void onEdgeGesture();
@@ -400,13 +410,13 @@ public class EdgeGestureLayout extends FrameLayout {
      * Percurso minimo do gesto horizontal.
      *
      * <p>Medido na largura, e nao na altura: o gesto corre de lado, e um percentual
-     * da altura nao diria nada sobre o quanto falta andar. O piso de 56dp evita que
-     * um arrasto curto e nervoso abra a tela sem a pessoa querer.
+     * da altura nao diria nada sobre o quanto falta andar. O piso existe para a tela
+     * estreita; num aparelho normal quem manda e a porcentagem.
      */
     private float computeSideMinTravel(float width) {
         return Math.max(
                 ThemeHelper.dp(getContext(), SIDE_MIN_TRAVEL_DP),
-                width * 0.18f);
+                width * 0.10f);
     }
 
     private boolean startedInSideBand(float rawX, float width) {

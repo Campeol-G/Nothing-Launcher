@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Minimal Launcher</string>
+    <string name="app_name">Nothing Launcher</string>
 
     <!-- Tela principal -->
     <string name="favorites_list_description">Lista de apps favoritos</string>
