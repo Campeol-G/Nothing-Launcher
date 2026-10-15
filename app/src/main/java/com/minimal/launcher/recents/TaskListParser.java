@@ -47,6 +47,16 @@ final class TaskListParser {
     private static final String COMPONENT_FALLBACK_KEY = "cmp=";
     private static final String LAST_ACTIVE_KEY = "lastActiveTime=";
 
+    /**
+     * Quantas activities a task tem. Zero = task fantasma de app encerrado.
+     *
+     * <p>O {@code sz} é o último campo da linha, e a linha fecha com uma chave:
+     * {@code ... mode=fullscreen sz=0}. Por isso o valor precisa perder a chave antes
+     * de virar número — do contrário {@code "0}"} não é número nenhum e a task
+     * fantasma passa, que é justamente o que o filtro existe para impedir.
+     */
+    private static final String SIZE_KEY = "sz=";
+
     private TaskListParser() {
     }
 
@@ -114,6 +124,8 @@ final class TaskListParser {
         String type = null;
         String packageName = null;
         long lastActive = 0L;
+        // -1 = o dumpsys nao disse. Vira "nao descartar" no flush.
+        int activities = -1;
         boolean insideBlock = false;
 
         for (String line : dumpsysOutput.split("\n")) {
@@ -121,10 +133,24 @@ final class TaskListParser {
 
             if (trimmed.startsWith(BLOCK_PREFIX)) {
                 // Bloco novo: o que valia era do bloco anterior.
-                flush(seen, packages, lastActiveAt, type, packageName, lastActive);
+                flush(seen, packages, lastActiveAt, type, packageName, lastActive,
+                        activities);
                 type = valueAfter(trimmed, TYPE_KEY);
                 packageName = null;
                 lastActive = 0L;
+                activities = -1;
+                // `sz=` fica no fim da linha do Recent #N. So nesta linha ele conta:
+                // uma linha de detalhe que comece com sz nao descreve a task.
+                String tamanho = valueAfter(trimmed, SIZE_KEY);
+                if (tamanho != null) {
+                    try {
+                        activities = Integer.parseInt(trimBrace(tamanho));
+                    } catch (NumberFormatException ignored) {
+                        // Valor ilegível: o campo existe mas nao se entende. Melhor
+                        // mostrar o app do que esconde-lo por duvida de parse.
+                        activities = -1;
+                    }
+                }
                 insideBlock = true;
                 continue;
             }
@@ -156,7 +182,7 @@ final class TaskListParser {
                 packageName = found;
             }
         }
-        flush(seen, packages, lastActiveAt, type, packageName, lastActive);
+        flush(seen, packages, lastActiveAt, type, packageName, lastActive, activities);
         return new Tasks(packages, lastActiveAt);
     }
 
@@ -183,15 +209,46 @@ final class TaskListParser {
                               @NonNull Map<String, Long> lastActiveAt,
                               @Nullable String type,
                               @Nullable String packageName,
-                              long lastActive) {
+                              long lastActive,
+                              int activities) {
         if (packageName == null
                 || NON_APP_TASK_TYPES.contains(type)
                 || OUR_PACKAGE.equals(packageName)
+                // Task fantasma: o dumpsys continua listando a task do app depois
+                // que ele foi encerrado, mas com sz=0 — nenhuma activity dentro.
+                //
+                // Sem esta linha, o app que a pessoa fechou voltava à lista na
+                // leitura seguinte. Era o bug mais visível da tela: fechar, sair,
+                // voltar, e o app lá estava de novo. `sz` ausente não descarta
+                // ninguém: root antigo que não escreve o campo continua funcionando
+                // como antes.
+                || activities == 0
                 || !seen.add(packageName)) {
             return;
         }
         packages.add(packageName);
         lastActiveAt.put(packageName, lastActive);
+    }
+
+    /**
+     * Tira a chave que fecha a linha.
+     *
+     * <p>O último campo da linha do Recent #N vem colado nela: {@code sz=0}. Sem
+     * isso o valor seria {@code "0}"}, que não é número, e a task fantasma — que o
+     * filtro existe justamente para descartar — passava como se fosse app aberto.
+     */
+    @NonNull
+    private static String trimBrace(@NonNull String valor) {
+        int fim = valor.length();
+        while (fim > 0) {
+            char c = valor.charAt(fim - 1);
+            if (c == '}' || c == ')' || c == ',') {
+                fim--;
+                continue;
+            }
+            break;
+        }
+        return valor.substring(0, fim);
     }
 
     /** O trecho entre chaves da linha {@code intent={...}}, ou null se não houver. */

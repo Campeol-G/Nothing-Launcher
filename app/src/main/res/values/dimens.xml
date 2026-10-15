@@ -33,6 +33,8 @@
     <dimen name="recent_dismiss_size">20sp</dimen>
     <dimen name="recent_row_padding">16dp</dimen>
     <dimen name="recent_footer_padding">18dp</dimen>
+    <!-- Respiro entre a última linha da lista e o botão que fica embaixo. -->
+    <dimen name="recent_list_bottom_padding">6dp</dimen>
     <!--
       O "Limpar tudo" tem o mesmo corpo do nome: menor que isso, um botão do
       mesmo importance ao lado de linhas parecidas fica com cara de nota de rodapé.

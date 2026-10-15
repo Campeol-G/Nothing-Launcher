@@ -140,7 +140,12 @@ public final class RecentAppsActivity extends AppCompatActivity
             animarEntrada(getIntent());
         }
 
-        list.setLayoutManager(new LinearLayoutManager(this));
+        LinearLayoutManager linhas = new LinearLayoutManager(this);
+        // A lista se levanta do botão, e não desce do topo. Sem isto o primeiro app
+        // nasce colado no status bar — o ponto mais distante do polegar, para a tela
+        // cujo botão fica embaixo.
+        linhas.setStackFromEnd(true);
+        list.setLayoutManager(linhas);
         list.setAdapter(adapter = new RecentListAdapter(this, new ArrayList<>(), this));
 
         // O pé e a dica usam o mesmo estilo das linhas de apps, então precisam do

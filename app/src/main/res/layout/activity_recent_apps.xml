@@ -24,6 +24,16 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
+        <!--
+          A lista cresce para cima a partir do pé, e não para baixo a partir do topo.
+
+          O botão fica embaixo, e é ele o chão da tela. Com o primeiro app colado
+          nele, a lista vira uma pilha que se levanta do botão para cima — o que
+          também põe o app mais recente junto da mão, e não no topo, longe dela.
+
+          O ancoramento é `setStackFromEnd` no LayoutManager, em RecentAppsActivity:
+          o atributo XML é privado da biblioteca.
+        -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recent_apps_list"
             android:layout_width="match_parent"
@@ -33,7 +43,7 @@
             android:contentDescription="@string/recent_list_description"
             android:overScrollMode="never"
             android:paddingTop="@dimen/clock_list_gap"
-            android:paddingBottom="@dimen/recent_footer_padding"
+            android:paddingBottom="@dimen/recent_list_bottom_padding"
             android:scrollbars="none" />
 
         <!--
