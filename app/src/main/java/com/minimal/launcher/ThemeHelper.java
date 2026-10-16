@@ -3,6 +3,7 @@ package com.minimal.launcher;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.LayerDrawable;
@@ -194,6 +195,29 @@ public final class ThemeHelper {
             root.setBackgroundColor(getHomeBackgroundColor(context));
             paintTree(root, getHomeForegroundColor(context));
         }
+    }
+
+    /**
+     * Pinta a tela e a janela em volta dela.
+     *
+     * <p>A janela também, e não é vaidade. O tema herda do AppCompat, cujo
+     * {@code windowBackground} é um cinza escuro que não é a cor de nenhum dos 11
+     * combos; {@code root} é a cor certa, mas ele só cobre a janela depois que isto
+     * roda.
+     *
+     * <p>A diferença aparece em todo deslize, porque no deslize a parte da tela que
+     * o conteúdo ainda não alcançou é a janela, não o conteúdo. Foi o que fazia a
+     * cor parecer mudar por 200ms ao abrir uma tela de consulta: medido no aparelho,
+     * o que aparecia por baixo era #303030 sobre um OLED de #000000.
+     */
+    public static void paint(@NonNull AppCompatActivity activity,
+                             @NonNull View root,
+                             boolean isSearch) {
+        paint((Context) activity, root, isSearch);
+        activity.getWindow().setBackgroundDrawable(new ColorDrawable(
+                isSearch
+                        ? getSearchBackgroundColor(activity)
+                        : getHomeBackgroundColor(activity)));
     }
 
     private static void paintTree(@NonNull View view, int foreground) {
