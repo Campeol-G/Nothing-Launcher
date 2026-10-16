@@ -82,6 +82,14 @@
           As linhas seguem a mao dominante, e o botao nao: se ficasse na mesma
           ponta dos nomes, o dedo teria de mudar de lado para acertar a lista e o
           botao. No meio ele fica a mesma distancia das duas pontas.
+
+          Nasce gone, e o RecentAppsActivity.atualizarPe() é quem o mostra. Ele só
+          pode aparecer depois que a lista foi lida — e enquanto ela não foi, não há
+          o que limpar, e um botão de "Limpar tudo" sobre uma lista que ainda não
+          existe é um botão que mente. A leitura passa pelo binder do Shizuku, e a
+          tela entra deslizando justo antes dela: com o botão visível desde o
+          XML, ele aparecia por uma fração de segundo junto com a entrada da tela,
+          batendo no dedo de quem só estava passando.
         -->
         <TextView
             android:id="@+id/recent_clear_all"
@@ -92,7 +100,8 @@
             android:paddingTop="@dimen/recent_clear_all_top_padding"
             android:paddingBottom="@dimen/recent_footer_padding"
             android:text="@string/recent_clear_all"
-            android:textSize="@dimen/recent_clear_all_size" />
+            android:textSize="@dimen/recent_clear_all_size"
+            android:visibility="gone" />
 
     </LinearLayout>
 
