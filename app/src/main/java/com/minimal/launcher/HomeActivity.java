@@ -185,8 +185,15 @@ public final class HomeActivity extends AppCompatActivity
     /**
      * Preferências e medidas que mudam o desenho da tela inicial.
      *
-     * <p>Entra a escala efetiva, e não só a preferência: girar o aparelho muda
-     * a altura útil e portanto o ajuste automático da tipografia.
+     * <p>Entra a escala efetiva, e não só a preferência, porque é ela que aparece
+     * em cada {@code setTextSize}.
+     *
+     * <p>A orientação não entra, e antes entrava. Girar o aparelho mudava a
+     * altura útil, que mudava o ajuste automático da tipografia, que fazia a
+     * assinatura mudar na volta — e a tela se recreava com as medidas da
+     * orientação anterior. Agora o ajuste automático mede a borda mais longa, que
+     * não muda ao girar, e a rotação não passa por aqui: o manifesto tira esta
+     * tela do configChanges de orientação, e o Android refaz o onCreate inteiro.
      */
     private String prefsSignature() {
         return prefs.getDominantHand() + '|'

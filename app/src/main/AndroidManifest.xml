@@ -50,6 +50,39 @@
         android:supportsRtl="false"
         android:theme="@style/Theme.MinimalLauncher">
 
+        <!--
+          Quem se recria ao girar, e quem não.
+
+          Só a tela inicial fica sem orientation|screenLayout|screenSize|
+          smallestScreenSize no configChanges. Declarados, eles dizem ao Android
+          que o app cuida da rotação sozinho — e nada no app cuida: não existe um
+          onConfigurationChanged em lugar nenhum. O desenho fica assado na caixa
+          errada. A tela inicial é a única que mede a tela: a altura do bloco de
+          hora e data, o teto do autoSize do relógio, a margem da lista e o número
+          de favoritos saem de LauncherUtils, que lê a altura atual. Fora do
+          configChanges, o Android recria a activity e o onCreate refaz cada
+          medida a partir da caixa nova — um lugar só, e o lugar que já existia.
+
+          As outras três ficam com o configChanges completo, e a razão delas é
+          esta: desde que getFontFactor mede a borda mais longa em vez da altura,
+          nada do que elas assam no onCreate depende da orientação. A tipografia é
+          a mesma nos dois sentidos, e o resto é peso, margem e insets — que o
+          Android refaz sozinho quando a activity não é recriada.
+
+          A busca em particular não pode ser recriada: o contrato dela é o
+          teclado. "Sem teclado esta tela não tem função" é lido por insets, e na
+          rotação o teclado pisca — some e volta em ~50ms antes de a janela
+          perder o foco. Numa tela recriada esse piscar chega com tudo verdadeiro
+          (o teclado já foi visto, a activity está em primeiro plano, a janela
+          tem foco) e a busca se fecha sozinha enquanto a pessoa só queria girar.
+          Medido no aparelho: o insets reportou teclado ausente às 12.161 e de
+          volta às 12.211, e o finish saiu às 12.329.
+
+          Teclado fica no configChanges das quatro porque abrir o teclado não é
+          mudança de desenho: a janela é adjustNothing e a tela precisa apenas do
+          aviso de insets.
+        -->
+
         <!-- ============================================================
              Launcher: HOME + DEFAULT + LAUNCHER + singleTask.
              Trocar o launcher padrão funciona pelo filtro HOME.
@@ -57,7 +90,7 @@
         <activity
             android:name=".HomeActivity"
             android:clearTaskOnLaunch="true"
-            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize"
+            android:configChanges="keyboard|keyboardHidden|navigation"
             android:excludeFromRecents="true"
             android:exported="true"
             android:launchMode="singleTask"
