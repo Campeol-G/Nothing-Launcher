@@ -10,6 +10,7 @@ import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -45,7 +46,8 @@ import java.util.List;
  * deu para ler".
  */
 public final class RecentAppsActivity extends AppCompatActivity
-        implements RecentListAdapter.Callback, RecentAppsSource.Callback {
+        implements RecentListAdapter.Callback, RecentAppsSource.Callback,
+        EdgeGestureLayout.SideGestureBlocker {
 
     /**
      * O {@link DismissedStore} e o {@link ShizukuTaskKiller} são criados no
@@ -55,6 +57,21 @@ public final class RecentAppsActivity extends AppCompatActivity
      */
     /** O app do Shizuku, para o aviso levar direto à tela dele. */
     private static final String SHIZUKU_PACKAGE = "moe.shizuku.privileged.api";
+
+    /**
+     * Quanto da linha o dedo precisa percorrer para ela ser apagada.
+     *
+     * <p>Metade, que é o padrão do {@link ItemTouchHelper}, é o valor de um gesto
+     * de comando: atravessar metade da tela para confirmar algo que a pessoa já
+     * decidiu é pedir precisão de outro tipo. Um terço é o ponto em que o dedo já
+     * foi longe o bastante para ter pegado a intenção e perto o bastante para a
+     * linha ainda não ter saído da tela.
+     *
+     * <p>Não é tão baixo que um arrasto de rolagem apague: o que entra na conta
+     * antes disso é o slop do sistema na horizontal, que é a mesma trava que
+     * protege a rolagem da lista.
+     */
+    private static final float LIMIAR_APAGAR = 0.35f;
 
     /**
      * De que lado a tela entra, quando ela foi aberta por arrasto.
@@ -107,6 +124,14 @@ public final class RecentAppsActivity extends AppCompatActivity
      */
     private final List<AppEntry> shown = new ArrayList<>();
 
+    /**
+     * De onde a lista está na tela, para converter o toque em coordenada dela.
+     *
+     * <p>Reaproveitado porque {@link #temAppEm} é chamado a cada toque e a lista
+     * não anda entre um {@code DOWN} e o arrasto que ele começa.
+     */
+    private final int[] origemDaLista = new int[2];
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         ThemeHelper.applyNightMode(this);
@@ -134,6 +159,11 @@ public final class RecentAppsActivity extends AppCompatActivity
         // pela mesma dobradura.
         root.setSideGesture(this::sairParaO);
 
+        // ...mas só onde não há app. Em cima de uma linha o mesmo arrasto é do
+        // app, e ele sai da lista. Decidido no DOWN, não a cada MOVE: o dono do
+        // gesto é de onde o dedo partiu.
+        root.setSideGestureBlocker(this);
+
         // Se veio por arrasto, a tela entra deslizando pelo lado oposto ao dedo.
         // Sem isso (aberta por atalho do sistema) nao ha animacao nenhuma.
         if (savedInstanceState == null) {
@@ -147,6 +177,11 @@ public final class RecentAppsActivity extends AppCompatActivity
         linhas.setStackFromEnd(true);
         list.setLayoutManager(linhas);
         list.setAdapter(adapter = new RecentListAdapter(this, new ArrayList<>(), this));
+
+        // O arrasto que apaga a linha. Ele vive no RecyclerView, e é por isso que a
+        // tela precisa recusar o gesto dele: os dois escutam o mesmo arrasto, e sem
+        // a recusa o app sairia da lista e a tela fecharia no mesmo gesto.
+        ligarArrastoParaApagar();
 
         // O pé e a dica usam o mesmo estilo das linhas de apps, então precisam do
         // mesmo tratamento: fonte e cor em runtime, como o adapter faz.
@@ -260,6 +295,72 @@ public final class RecentAppsActivity extends AppCompatActivity
         }
     }
 
+    // -------------------------------------------------------------- gesto
+
+    /**
+     * O arrasto que apaga a linha, para os dois lados.
+     *
+     * <p>É o mesmo caminho do X, e é proposital que os dois existam: o X é o alvo
+     * que o dedo acha sem olhar, e o arrasto é o gesto curto para quem já sabe
+     * que a linha está lá. Os telefones que fazem swipe para dispensar fazem os
+     * dois, e o mesmo dedo prefere o atalho quando já está na linha.
+     *
+     * <p>Só dispensa, não arrasta: a ordem das linhas é a do sistema, que a lista
+     * inteira reflete, e um reordenamento aqui seria uma ordem que não existe em
+     * lugar nenhum. Por isso o primeiro argumento do callback é zero.
+     *
+     * <p>O limiar é menor que o do gesto que fecha a tela. Apagar é uma ação de
+     * leitura — a pessoa já decidiu, o dedo só confirma — e esperar metade da linha
+     * seria pedir precisão de comando. Não é tão baixo que um arrasto de rolagem
+     * apague: {@link ItemTouchHelper} só conta o que passa do slop na horizontal.
+     */
+    private void ligarArrastoParaApagar() {
+        new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(
+                0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
+            @Override
+            public boolean onMove(@NonNull RecyclerView recyclerView,
+                                  @NonNull RecyclerView.ViewHolder viewHolder,
+                                  @NonNull RecyclerView.ViewHolder target) {
+                return false;
+            }
+
+            @Override
+            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direcao) {
+                // A posição vem do holder, não do gesto: entre o arrasto e este
+                // callback a lista pode ter rolado, e um índice guardado antes
+                // apontaria para a linha errada.
+                int posicao = viewHolder.getBindingAdapterPosition();
+                if (posicao == RecyclerView.NO_POSITION || posicao >= shown.size()) {
+                    return;
+                }
+                onDismiss(shown.get(posicao), posicao);
+            }
+
+            @Override
+            public float getSwipeThreshold(@NonNull RecyclerView.ViewHolder viewHolder) {
+                return LIMIAR_APAGAR;
+            }
+        }).attachToRecyclerView(list);
+    }
+
+    /**
+     * O arrasto lateral é desta tela, ou de um app?
+     *
+     * <p>Responde ao {@code DOWN}, quando ainda se sabe de onde o dedo partiu.
+     * Sob uma linha, o arrasto é dela; no vazio de cima, nas margens e no rodapé,
+     * não há app, e o gesto fecha a tela como em qualquer outra.
+     *
+     * <p>{@link #findChildViewUnder} devolve {@code null} justamente no que não é
+     * linha: o vazio que sobra acima da lista, porque ela cresce de baixo para
+     * cima, e o respiro do {@code padding}, porque a busca do RecyclerView desconta
+     * o padding antes de olhar. Não é preciso medir nada aqui.
+     */
+    @Override
+    public boolean temAppEm(float rawX, float rawY) {
+        list.getLocationOnScreen(origemDaLista);
+        return list.findChildViewUnder(rawX - origemDaLista[0], rawY - origemDaLista[1]) != null;
+    }
+
     // -------------------------------------------------------------- toques
 
     @Override
@@ -271,10 +372,10 @@ public final class RecentAppsActivity extends AppCompatActivity
     public void onDismiss(@NonNull AppEntry entry, int position) {
         // A dispensa vai primeiro: ela é o que tira o app da lista, e é ela que
         // sobrevive à falta de Shizuku. Encerrar é o que vem depois, e pode não
-        // acontecer — o app continua aberto, que é o que o X promete.
+        // acontecer — o app continua aberto, que é o que o X e o arrasto prometem.
         // O instante é o do relogio monotonic: e ele que diz a tela se a task e de
-        // antes ou de depois do X. Um app reaberto pela pessoa tem task mais nova
-        // que a dispensa e volta para a lista sozinho.
+        // antes ou de depois da dispensa. Um app reaberto pela pessoa tem task mais
+        // nova que a dispensa e volta para a lista sozinho.
         dismissedStore.dismiss(entry.packageName, android.os.SystemClock.elapsedRealtime());
         shown.remove(entry);
         adapter.removeAt(position);

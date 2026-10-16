@@ -90,13 +90,21 @@ public final class RecentListAdapter extends RecyclerView.Adapter<RecentListAdap
         notifyDataSetChanged();
     }
 
-    /** Tira a linha da posição dada, depois que o X foi apertado. */
+    /**
+     * Tira a linha da posição dada, depois que o X foi apertado ou que o dedo a
+     * arrastou para fora.
+     *
+     * <p>{@code notifyItemRemoved} e não {@code notifyDataSetChanged}: quem chama
+     * está no meio de uma animação de saída — a do X é o sumiço da linha, a do
+     * arrasto é o deslize para fora — e avisar "a lista inteira mudou" cancela
+     * ambas e mostra a lista repiscando.
+     */
     public void removeAt(int position) {
         if (position < 0 || position >= items.size()) {
             return;
         }
         items.remove(position);
-        notifyDataSetChanged();
+        notifyItemRemoved(position);
     }
 
     @NonNull
