@@ -34,17 +34,47 @@
           O ancoramento é `setStackFromEnd` no LayoutManager, em RecentAppsActivity:
           o atributo XML é privado da biblioteca.
         -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recent_apps_list"
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
-            android:clipToPadding="false"
-            android:contentDescription="@string/recent_list_description"
-            android:overScrollMode="never"
-            android:paddingTop="@dimen/clock_list_gap"
-            android:paddingBottom="@dimen/recent_list_bottom_padding"
-            android:scrollbars="none" />
+            android:layout_weight="1">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recent_apps_list"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:contentDescription="@string/recent_list_description"
+                android:overScrollMode="never"
+                android:paddingTop="@dimen/clock_list_gap"
+                android:paddingBottom="@dimen/recent_list_bottom_padding"
+                android:scrollbars="none" />
+
+            <!--
+              A frase mora no MEIO da área da lista, e não no pé.
+
+              Ela aparece quando a lista está vazia — e, com a lista vazia, o "Limpar
+              tudo" some. A tela fica com uma frase sozinha no meio, que é onde ela
+              é lida; grudada no rodapé ela pareceria ser o rótulo do botão que
+              acabou de desaparecer.
+
+              Sobreposta à lista em vez de abaixo dela: é a lista que some quando não
+              há o que mostrar, e assim a frase fica no lugar sem a tela precisar
+              recontar o espaço quando uma coisa aparece e a outra some.
+            -->
+            <TextView
+                android:id="@+id/recent_hint"
+                style="@style/AppNameText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:paddingTop="@dimen/app_row_padding"
+                android:paddingBottom="@dimen/app_row_padding"
+                android:textSize="@dimen/recent_hint_size"
+                android:visibility="gone" />
+
+        </FrameLayout>
 
         <!--
           Centralizado, e não alinhado com os nomes.
@@ -63,14 +93,6 @@
             android:paddingBottom="@dimen/recent_footer_padding"
             android:text="@string/recent_clear_all"
             android:textSize="@dimen/recent_clear_all_size" />
-
-        <TextView
-            android:id="@+id/recent_hint"
-            style="@style/AppNameText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textSize="@dimen/recent_hint_size"
-            android:visibility="gone" />
 
     </LinearLayout>
 
