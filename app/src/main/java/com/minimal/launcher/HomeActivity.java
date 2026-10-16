@@ -1,6 +1,7 @@
 package com.minimal.launcher;
 
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.os.Bundle;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -100,6 +101,18 @@ public final class HomeActivity extends AppCompatActivity
         params.topMargin = headerHeightPx + clockListGapPx();
         favoritesList.setLayoutParams(params);
         favoritesList.setPadding(0, 0, 0, 0);
+
+        // Na paisagem a tela é larga demais para um canto: os favoritos iam
+        // encostar na borda da mão dominante e deixar metade da tela vazia. Ali
+        // eles vão para o meio. No vertical continua do lado da mão, que é onde
+        // o polegar chega, e é o desenho que já estava feito.
+        //
+        // A lista é match_parent, então o gravity do container não centraliza
+        // nada aqui — quem decide é o alinhamento de cada linha.
+        if (getResources().getConfiguration().orientation
+                == Configuration.ORIENTATION_LANDSCAPE) {
+            favoritesAdapter.setTextGravity(Gravity.CENTER);
+        }
 
         maxFavorites = LauncherUtils.getMaxFavorites(this);
 
