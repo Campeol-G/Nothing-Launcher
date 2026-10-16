@@ -75,14 +75,6 @@ public final class RecentAppsActivity extends AppCompatActivity
     private static final float LIMIAR_APAGAR = 0.35f;
 
     /**
-     * De que lado a tela entrou, para o voltar sair pelo mesmo lado.
-     *
-     * <p>Guardado mesmo quando a entrada não é animada: abrir por atalho do sistema
-     * também precisa saber para que lado a tela deve ir embora.
-     */
-    private int ladoDeEntrada = LADO_NENHUM;
-
-    /**
      * De que lado a tela entra, quando ela foi aberta por arrasto.
      *
      * <p>Guarda o lado pelo qual ela entra, e não a direção do dedo: o dedo vai
@@ -128,6 +120,14 @@ public final class RecentAppsActivity extends AppCompatActivity
     private int loadToken;
 
     /**
+     * De que lado a tela entrou, para o voltar sair pelo mesmo lado.
+     *
+     * <p>Guardado mesmo quando a entrada não é animada: abrir por atalho do sistema
+     * também precisa saber para que lado a tela deve ir embora.
+     */
+    private int ladoDeEntrada = LADO_NENHUM;
+
+    /**
      * Os apps que a tela está mostrando, para o "limpar tudo" saber o que
      * encerrar. Não é a lista do adapter: é sem o botão do fim.
      */
@@ -168,7 +168,7 @@ public final class RecentAppsActivity extends AppCompatActivity
         // pela mesma dobradura.
         root.setSideGesture(this::sairParaO);
 
-        // ...mas só onde não há app. Em cima de uma linha o mesmo arrasto é do
+        // ...mas só onde não há app. Em cima de uma linha o mesmo arrasto é o do
         // app, e ele sai da lista. Decidido no DOWN, não a cada MOVE: o dono do
         // gesto é de onde o dedo partiu.
         root.setSideGestureBlocker(this);
@@ -337,6 +337,29 @@ public final class RecentAppsActivity extends AppCompatActivity
         }
     }
 
+    // -------------------------------------------------------------- toques
+
+    @Override
+    public void onAppClick(@NonNull AppEntry entry) {
+        entry.launch(this);
+    }
+
+    @Override
+    public void onDismiss(@NonNull AppEntry entry, int position) {
+        // A dispensa vai primeiro: ela é o que tira o app da lista, e é ela que
+        // sobrevive à falta de Shizuku. Encerrar é o que vem depois, e pode não
+        // acontecer — o app continua aberto, que é o que o X e o arrasto prometem.
+        // O instante é o do relogio monotonic: e ele que diz a tela se a task e de
+        // antes ou de depois da dispensa. Um app reaberto pela pessoa tem task mais
+        // nova que a dispensa e volta para a lista sozinho.
+        dismissedStore.dismiss(entry.packageName, android.os.SystemClock.elapsedRealtime());
+        shown.remove(entry);
+        adapter.removeAt(position);
+        // A linha que saiu pode ter sido a última: o pé e uma função da lista.
+        atualizarPe();
+        killOffMainThread(() -> killer.kill(entry.packageName));
+    }
+
     // -------------------------------------------------------------- gesto
 
     /**
@@ -401,29 +424,6 @@ public final class RecentAppsActivity extends AppCompatActivity
     public boolean temAppEm(float rawX, float rawY) {
         list.getLocationOnScreen(origemDaLista);
         return list.findChildViewUnder(rawX - origemDaLista[0], rawY - origemDaLista[1]) != null;
-    }
-
-    // -------------------------------------------------------------- toques
-
-    @Override
-    public void onAppClick(@NonNull AppEntry entry) {
-        entry.launch(this);
-    }
-
-    @Override
-    public void onDismiss(@NonNull AppEntry entry, int position) {
-        // A dispensa vai primeiro: ela é o que tira o app da lista, e é ela que
-        // sobrevive à falta de Shizuku. Encerrar é o que vem depois, e pode não
-        // acontecer — o app continua aberto, que é o que o X e o arrasto prometem.
-        // O instante é o do relogio monotonic: e ele que diz a tela se a task e de
-        // antes ou de depois da dispensa. Um app reaberto pela pessoa tem task mais
-        // nova que a dispensa e volta para a lista sozinho.
-        dismissedStore.dismiss(entry.packageName, android.os.SystemClock.elapsedRealtime());
-        shown.remove(entry);
-        adapter.removeAt(position);
-        // A linha que saiu pode ter sido a última: o pé e uma função da lista.
-        atualizarPe();
-        killOffMainThread(() -> killer.kill(entry.packageName));
     }
 
     /**

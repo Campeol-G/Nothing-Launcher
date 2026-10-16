@@ -24,9 +24,10 @@ O que isso significa na prática:
 - **O Shizuku morre a cada reinício do aparelho** e precisa ser ligado de novo
   por ADB. Sem ele, a tela de recentes mostra um aviso e as outras duas telas
   funcionam normal.
-- **Não há teste automático de interface.** São 20 testes de lógica pura (parser
-  da lista, ranqueamento, guarda do "não se mate"). O resto — o visual, os gestos —
-  foi verificado à mão em um aparelho, e é o que pode surprising te.
+- **Não há teste automático de interface.** São 34 testes de lógica pura (parser
+  da lista, ranqueamento, guarda do "não se mate", política do arrasto lateral).
+  O resto — o visual, os gestos — foi verificado à mão em um aparelho, e é o que
+  pode surprising te.
 
 Se você perde o aparelho de vez por usar isso como launcher principal, não
 instale ainda.
@@ -45,7 +46,8 @@ outros ficaram de fora. O ranqueamento aceita o nome pela metade: `gmb` acha
 
 ![Busca](images/searchScreen11.png)
 
-**Apps recentes** — os apps abertos no sistema, em texto, com um X por linha.
+**Apps recentes** — os apps abertos no sistema, em texto. Cada linha sai de dois
+jeitos: pelo X, ou arrastando o dedo para o lado em cima dela.
 
 ![Apps recentes](images/activitScreen11.png)
 
@@ -84,7 +86,7 @@ cada arquivo e compara com a paleta — um print de cor errada passaria batido.
 |---|---|
 | JDK | 17 ou superior (o build foi feito com 27) |
 | Android SDK | platform **android-37** e build-tools compatível |
-| Gradle | 9.8 ou superior |
+| Gradle | 9.8 ou superior — o plugin do Android usado aqui é o **9.4.1** |
 
 O **Android Studio** já vem com JDK, Gradle e SDK Manager, então se você o tem
 instalado ele é o caminho mais curto: abra a pasta do projeto e espere o sync.
@@ -157,10 +159,10 @@ sdk.dir=C:/Users/voce/AppData/Local/Android/Sdk
 
 ### Instalar
 
-```bash
-adb install -r app/build/outputs/apk/debug/app-debug.apk
 Pelo terminal, com o aparelho em modo USB:
 
+```bash
+adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
 ### Definir como launcher padrão
@@ -222,8 +224,20 @@ boot.
 
 O arrasto lateral vale **em qualquer lugar da tela e para os dois lados** — ele é
 ambidestro e não depende da mão configurada. Precisa percorrer 8% da largura da
-tela, o que dá um arrasto curto de polegar. Na tela de apps recentes o mesmo
-arrasto a fecha, indo na direção do dedo.
+tela, o que dá um arrasto curto de polegar.
+
+Na tela de apps recentes o mesmo arrasto significa duas coisas, e quem decide é
+só **de onde o dedo partiu**: em cima de uma linha ele apaga aquele app, e fora
+das linhas ele fecha a tela. Fora das linhas é o vazio que sobra acima da lista
+(ela cresce de baixo para cima), as margens laterais e a faixa do rodapé. Com a
+lista cheia em cima da tela, sobra o **botão voltar do sistema**, que fecha igual
+e ainda sai deslizando pelo lado em que a tela entrou.
+
+O X e o arrasto fazem a mesma coisa e existem os dois de propósito: o X é o alvo
+que o dedo acha sem olhar, e o arrasto é o gesto curto para quem já sabe que a
+linha está ali. O arrasto apaga a partir de um terço da largura da linha, bem
+menos que a metade que seria o padrão — apagar é uma ação de leitura, a pessoa
+já decidiu e o dedo só confirma.
 
 A tela de apps recentes entra deslizando pelo lado **oposto** ao do dedo e sai
 indo **com** ele, em 200ms — o suficiente para o olho acompanhar sem virar espera.
@@ -306,9 +320,11 @@ armadilha encontrada estão em [`docs/notas-tecnicas.md`](docs/notas-tecnicas.md
 ## Testes
 
 ```bash
-gradle :app:testDebugUnitTest    # 20 testes de lógica pura
+gradle :app:testDebugUnitTest    # 34 testes de lógica pura
 gradle :app:lintDebug            # análise estática
 ```
 
 Os testes cobrem o parser da lista de apps abertos, a regra de dispensa por
-instante e a guarda que impede o app de se encerrar. Não cobrem interface.
+instante, a guarda que impede o app de se encerrar e a política do arrasto
+lateral — incluindo quem fica com o gesto quando ele nasce em cima de um app. Não
+cobrem interface.

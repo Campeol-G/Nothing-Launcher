@@ -96,7 +96,9 @@ quiser, e é aí que as notificações aparecem como sempre.
 | Na busca: o teclado sumir | Fecha a busca: sem teclado não há busca |
 | Na tela de recentes: tocar no nome | Abre o app |
 | Na tela de recentes: tocar no X | Tira o app da lista e tenta encerrá-lo |
+| Na tela de recentes: arrastar de lado em cima da linha | O mesmo que o X, para os dois lados |
 | Na tela de recentes: tocar em "Limpar tudo" | Esvazia a lista e tenta encerrar tudo |
+| Na tela de recentes: arrastar de lado fora das linhas | Fecha |
 | Na tela de recentes: deslizar para baixo ou voltar | Fecha |
 
 ### Por que o arrasto para cima não colide com o sistema
@@ -448,3 +450,46 @@ e o que impede o "limpar tudo" de virar um apagão que o usuário não desfaz.
 A tela é registrada **sem `CATEGORY_LAUNCHER`**. É isso que a mantém fora da
 lista de apps e da busca, já que as duas listam o que tem essa categoria; o atalho
 do sistema a alcança por intent explícito, que não depende de filtro.
+
+### Dois donos para o mesmo arrasto
+
+O arrasto lateral da tela de recentes é o gesto que abre a lista **e** o gesto que
+fecha a própria tela. Depois que a linha passou a responder ao arrasto — para o
+app sair da lista, como em qualquer telefone — os dois disputam pelo mesmo
+movimento do dedo.
+
+Quem fica com ele é decidido **no `ACTION_DOWN`**, só de onde o dedo partiu, e
+guardado até o dedo soltar. Decidir a cada `MOVE` pareceria mais correto e é
+pior: o gesto trocaria de dono no meio do arrasto, e a linha sumiria no instante
+em que o dedo saísse dela.
+
+A pergunta "tem app aqui?" é respondida por `RecyclerView.findChildViewUnder`, que
+já devolve `null` exatamente no que não é linha: o vazio que sobra **acima** da
+lista (ela é ancorada com `setStackFromEnd`, então cresce de baixo para cima) e o
+respiro do `padding`, porque a busca desconta o padding antes de olhar. Nenhuma
+medição nova foi necessária.
+
+A regra em si — "nasceu em cima de uma linha, o gesto é da linha" — está em
+`SideGesturePolicy`, junto das outras decisões do arrasto, e é testada. Dentro da
+`View` ela só apareceria como "o arrasto parou de funcionar em uma tela", sem nada
+que explicasse por quê.
+
+### A cor que mudava durante o deslize
+
+Toda tela de consulta entra em `SlideAnimation`, que desliza **e** faz fade no
+`root` inteiro. E o `root` é quem carrega o `setBackgroundColor` da cor do combo.
+O resultado era uma cor que **mudava** por 200ms ao abrir a busca e os recentes.
+
+Não era o fade. Era a **janela**: o tema herda do AppCompat, e o
+`windowBackground` dele é um cinza escuro que não é a cor de nenhum dos 11 combos.
+No deslize, a parte da tela que o conteúdo ainda não alcançou é a janela, não o
+conteúdo — e ela aparecia inteira.
+
+Medido no aparelho, com `animator_duration_scale` em 10× para conseguir
+fotografar os quadros: o fundo ia de `#000000` para `#303030`, `#1b1b1b`,
+`#090909`, `#020202` e voltava a `#000000`. Visualmente, uma piscada para cinza
+e de volta.
+
+A correção é pintar a janela também (`ThemeHelper.paint` ganhou uma sobrecarga que
+recebe a activity). O deslize e o fade continuam os mesmos; só a cor de baixo
+deixou de ser a do tema.
