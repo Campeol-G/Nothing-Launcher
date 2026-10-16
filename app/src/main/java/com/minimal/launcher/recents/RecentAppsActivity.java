@@ -238,7 +238,6 @@ public final class RecentAppsActivity extends AppCompatActivity
             showHint(R.string.recent_shizuku_required, this::openShizuku);
             return;
         }
-        clearAll.setVisibility(View.VISIBLE);
         shown.clear();
         shown.addAll(entries);
         publish();
@@ -249,11 +248,28 @@ public final class RecentAppsActivity extends AppCompatActivity
         // pé, e ela existe para a lista poder rolar por cima.
         adapter.setItems(shown);
         list.setVisibility(View.VISIBLE);
-        // Lista vazia é estado real: nada aberto. E ela não é acionável, então não
-        // finge ser botão.
+        atualizarPe();
+    }
+
+    /**
+     * O pé da tela, que é uma função da lista e nada mais.
+     *
+     * <p>Com app na lista, o "Limpar tudo" é a única ação da tela e fica embaixo.
+     * Sem nenhum, ele some — limpar uma lista vazia não é ação, é um botão que
+     * mente — e a frase assume o meio da tela, que é onde ela é lida.
+     *
+     * <p>Fica separada de {@link #publish()} porque quem apaga uma linha chega
+     * aqui pelo {@code onDismiss}, e republicar a lista ali cancelaria a animação
+     * de saída da linha que o dedo acabou de arrastar.
+     */
+    private void atualizarPe() {
         if (shown.isEmpty()) {
+            // Lista vazia é estado real: nada aberto. E ela não é acionável, então
+            // não finge ser botão.
+            clearAll.setVisibility(View.GONE);
             showHint(R.string.recent_empty, null);
         } else {
+            clearAll.setVisibility(View.VISIBLE);
             hideHint();
         }
     }
@@ -379,6 +395,8 @@ public final class RecentAppsActivity extends AppCompatActivity
         dismissedStore.dismiss(entry.packageName, android.os.SystemClock.elapsedRealtime());
         shown.remove(entry);
         adapter.removeAt(position);
+        // A linha que saiu pode ter sido a última: o pé e uma função da lista.
+        atualizarPe();
         killOffMainThread(() -> killer.kill(entry.packageName));
     }
 
