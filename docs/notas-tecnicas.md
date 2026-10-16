@@ -493,3 +493,105 @@ e de volta.
 A correção é pintar a janela também (`ThemeHelper.paint` ganhou uma sobrecarga que
 recebe a activity). O deslize e o fade continuam os mesmos; só a cor de baixo
 deixou de ser a do tema.
+
+### O botão que nascia visível
+
+O `recent_clear_all` não tinha `android:visibility` no XML, então nascia visível, e
+só sumia dentro do callback do Shizuku que carrega a lista. Entre o `setContentView`
+e essa leitura ele ficava na tela e clicável, e a tela entra deslizando justo
+nesse intervalo — o botão passava junto com a entrada e batia no dedo de quem só
+estava virando o aparelho.
+
+O `atualizarPe()` já decidia tudo certo; o que faltava era o estado inicial. Com
+`visibility="gone"` no XML o botão **não pode** aparecer antes de haver o que
+limpar, e o `atualizarPe()` continua sendo o único lugar que o mostra. Isso não
+depende de tempo: é a condição inicial, não uma corrida que às vezes vence.
+
+O efeito colateral é que a tela de recentes fica **sem nada visível durante os 200ms
+da entrada** — a lista ainda não chegou e o botão não existe mais. Um `fade` de uma
+cor sólida sobre a mesma cor sólida é invisível, então a entrada sumiu junto com o
+botão. O texto da dica (`recent_hint`) também nasce `gone`, pela mesma razão.
+
+## A rotação do aparelho
+
+### O desenho ficava preso na paisagem
+
+As quatro telas declaravam `orientation|screenLayout|screenSize|smallestScreenSize`
+no `configChanges`, e não existe um `onConfigurationChanged` em lugar nenhum do
+projeto. Declarados, esses bits dizem ao Android que o app cuida da rotação
+sozinho. O app não cuidava, e o resultado era o `onCreate` de uma tela valendo
+para as duas orientações.
+
+Na tela inicial isso é visível sem esforço: a altura do bloco de hora e data é 28%
+da tela (672 px de 2400), aplicada em pixels. Deitada, a tela tem 1080 px de
+altura — o bloco continuava com 672, 62% dela, e o último favorito saía pela
+borda de baixo.
+
+Voltar ao vertical não trazia o desenho de volta, e essa parte é a menos óbvia.
+A tela inicial compara uma assinatura de preferências no `onResume` para saber se
+precisa se recriar, e essa assinatura incluía o ajuste automático de tipografia —
+que dependia da altura. Girar mudava a assinatura, mas **girar não dispara
+`onResume`**: só dispara quando a pessoa sai e volta. Aí a tela se recriava, em
+paisagem, assando as medidas da paisagem em pixels. Voltar ao vertical não dispara
+`onResume` de novo, e elas ficavam lá.
+
+Medido no aparelho, antes: conteúdo com 766 px de altura em vez de 1016, e o
+relógio com 131 px em vez de 353 — com o retrato correto, voltando a 1016 e 353.
+
+### Quem se recria, e quem não
+
+A correção tirou os bits de orientação do `configChanges` — mas **só da tela
+inicial**, e só porque ela é a única que mede a tela. `getHeaderHeightPx`, o teto
+do `autoSize` do relógio, a margem da lista e `getMaxFavorites` saem de
+`LauncherUtils`, que lê a altura atual. Fora do `configChanges`, o Android recria a
+activity e o `onCreate` refaz cada medida a partir da caixa nova: um lugar só, e o
+lugar que já existia.
+
+As outras três ficam de fora, e a razão delas depende de outro ajuste: com
+`getFontFactor` medindo a borda mais longa em vez da altura (ver
+[O ajuste automático mede a borda mais longa](#o-ajuste-automático-mede-a-borda-mais-longa)),
+nada do que elas assam depende mais da orientação. A tipografia é a mesma nos dois
+sentidos, e o resto é peso, margem e insets — que o Android refaz sozinho quando a
+activity não é recriada.
+
+### A busca não pode ser recriada
+
+Tirar os bits de orientação da busca foi o erro intermediário, e ele fechou a tela
+sozinha. O contrato da busca é o teclado: "sem teclado esta tela não tem função" é
+lido por insets, e na rotação o teclado **pisca**.
+
+No log do aparelho, com a busca aberta e texto digitado:
+
+```
+12.071  insets: teclado presente
+12.108  janela ganha o foco
+12.161  insets: teclado AUSENTE      <- a piscada, e a janela ainda com foco
+12.211  insets: teclado de volta     (~50 ms depois)
+12.465  janela perde o foco          <- só agora o Android desmonta a tela
+```
+
+Em 12.161 as três condições da guarda de `onKeyboardVisibilityChanged` estão
+verdadeiras ao mesmo tempo — o teclado já foi visto, a activity está em primeiro
+plano e a janela tem foco. A tela leu a piscada como "a pessoa dispensou o
+teclado" e chamou `finish()`. O `ActivityRecord.finishIfPossible` aparece no log
+às 12.329.
+
+Ou seja: a tela não tem como distinguir "o teclado foi dispensado" de "o teclado
+está se refazendo", e por isso ela não pode passar por um momento em que os dois
+são iguais. Ela precisa sobreviver à rotação.
+
+### O ajuste automático mede a borda mais longa
+
+`getFontFactor` comparava a altura da tela com 800 dp de referência. Girar o
+aparelho não o encolhe, e o cálculo não tem como saber a diferença: deitado, uma
+tela de 501 dp de altura parece uma tela baixa, e a tipografia crescia para o teto
+de 1,30 — 41% acima do 0,92 do vertical.
+
+Medir a borda mais longa dá o mesmo número nos dois sentidos, porque a borda longa
+é justamente a altura que a tela tinha no vertical. E no vertical a leitura é
+idêntica à de antes: a borda longa *é* a altura. É por isso que esta correção
+não mudou nada do que a pessoa já via de pé.
+
+Vale notar que as duas se combinam. Sem a borda longa, as três telas que seguem sem
+`configChanges` ainda teriam a tipografia mudando ao girar. Sem tirar a tela
+inicial do `configChanges`, ela continuaria com o bloco assado na caixa errada.
