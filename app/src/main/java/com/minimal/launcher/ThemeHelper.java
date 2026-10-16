@@ -307,6 +307,29 @@ public final class ThemeHelper {
                                    int topDp,
                                    int bottomDp,
                                    @Nullable KeyboardListener keyboardListener) {
+        applyInsets(activity, root, sideDp, topDp, bottomDp, keyboardListener, false);
+    }
+
+    /**
+     * Mesma coisa, e ainda reserving o espaço que o teclado ocupa.
+     *
+     * <p>As telas em geral não reservam: o teclado é coincidência nelas, e um
+     * `padding` a mais só empurraria o desenho para cima sem motivo. A busca
+     * reserva porque lá o teclado é requisito da tela — e na paisagem ele cobre
+     * quase a tela inteira, de modo que o resultado, que fica no meio do que
+     * sobra, cairia atrás dele.
+     *
+     * <p>No vertical a busca não pede isto, e por isso o resultado continua
+     * onde está: sobra sala entre ele e o teclado, e mexer nisso o empurraria
+     * para longe do lugar onde foi pensado.
+     */
+    public static void applyInsets(@NonNull AppCompatActivity activity,
+                                   @NonNull View root,
+                                   int sideDp,
+                                   int topDp,
+                                   int bottomDp,
+                                   @Nullable KeyboardListener keyboardListener,
+                                   boolean reservarParaTeclado) {
         Window window = activity.getWindow();
         WindowCompat.setDecorFitsSystemWindows(window, false);
         final int side = dp(root, sideDp);
@@ -316,11 +339,14 @@ public final class ThemeHelper {
         ViewCompat.setOnApplyWindowInsetsListener(root, (view, windowInsets) -> {
             Insets bars = windowInsets.getInsets(
                     WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
+            int teclado = reservarParaTeclado
+                    ? windowInsets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+                    : 0;
             view.setPadding(
                     bars.left + side,
                     bars.top + top,
                     bars.right + side,
-                    bars.bottom + bottom);
+                    bars.bottom + bottom + teclado);
 
             // A faixa de gesto do sistema tambem precisa ser conhecida, e nao e a
             // mesma coisa que a barra: com navegacao por gesto a barra e uma

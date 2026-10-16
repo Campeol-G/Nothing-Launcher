@@ -1,5 +1,6 @@
 package com.minimal.launcher;
 
+import android.content.res.Configuration;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextUtils;
@@ -88,7 +89,7 @@ public final class SearchActivity extends AppCompatActivity implements AppMenu.L
 
         // O teclado e precondicao da tela, entao a tela precisa saber quando ele
         // vai embora.
-        ThemeHelper.applyInsets(this, root, 26, 22, 10, this::onKeyboardVisibilityChanged);
+        aplicarInsets();
         ThemeHelper.applySystemBars(this);
 
         int foreground = ThemeHelper.getSearchForegroundColor(this);
@@ -195,6 +196,31 @@ public final class SearchActivity extends AppCompatActivity implements AppMenu.L
         });
 
         update("");
+    }
+
+    /**
+     * Os insets da tela, incluindo o espaço do teclado quando a paisagem pede.
+     *
+     * <p>Esta tela não é recriada ao girar, e é justamente por isso que ela não
+     * pode passar a ser: ver o comentário do manifesto. Então quem refaz o
+     * cálculo com a orientação nova é ela, em {@link #onConfigurationChanged}.
+     */
+    private void aplicarInsets() {
+        // Na paisagem o teclado cobre quase a tela inteira, e o resultado — que
+        // fica no meio do espaço que sobra — cairia atrás dele. No vertical sobra
+        // sala entre os dois, e o desenho de hoje é o que se quer manter.
+        boolean paisagem = getResources().getConfiguration().orientation
+                == Configuration.ORIENTATION_LANDSCAPE;
+        ThemeHelper.applyInsets(this, root, 26, 22, 10,
+                this::onKeyboardVisibilityChanged, paisagem);
+    }
+
+    @Override
+    public void onConfigurationChanged(@NonNull Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        // Só os insets dependem da orientação aqui. A tipografia não: ela mede a
+        // borda mais longa, que é a mesma nos dois sentidos.
+        aplicarInsets();
     }
 
     @Override
