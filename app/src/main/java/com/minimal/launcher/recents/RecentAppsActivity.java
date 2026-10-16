@@ -9,6 +9,7 @@ import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -72,6 +73,14 @@ public final class RecentAppsActivity extends AppCompatActivity
      * protege a rolagem da lista.
      */
     private static final float LIMIAR_APAGAR = 0.35f;
+
+    /**
+     * De que lado a tela entrou, para o voltar sair pelo mesmo lado.
+     *
+     * <p>Guardado mesmo quando a entrada não é animada: abrir por atalho do sistema
+     * também precisa saber para que lado a tela deve ir embora.
+     */
+    private int ladoDeEntrada = LADO_NENHUM;
 
     /**
      * De que lado a tela entra, quando ela foi aberta por arrasto.
@@ -164,8 +173,25 @@ public final class RecentAppsActivity extends AppCompatActivity
         // gesto é de onde o dedo partiu.
         root.setSideGestureBlocker(this);
 
+        // O voltar do Android fecha a tela, e ela sai pelo mesmo lado em que
+        // entrou. Sem isto o voltar é um corte seco no meio de um launcher que
+        // desliza — e a tela de recentes é a única em que o gesto é o caminho
+        // principal, então o corte aparecia logo depois de usar o gesto.
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                // Entrou pela esquerda, sai pela direita: a dobra é a mesma das
+                // duas pontas. Aberta por atalho do sistema, sem lado, sai pela
+                // direita.
+                sairParaO(ladoDeEntrada == LADO_DA_DIREITA
+                        ? EdgeGestureLayout.DIRECTION_LEFT
+                        : EdgeGestureLayout.DIRECTION_RIGHT);
+            }
+        });
+
         // Se veio por arrasto, a tela entra deslizando pelo lado oposto ao dedo.
         // Sem isso (aberta por atalho do sistema) nao ha animacao nenhuma.
+        ladoDeEntrada = getIntent().getIntExtra(EXTRA_LADO, LADO_NENHUM);
         if (savedInstanceState == null) {
             animarEntrada(getIntent());
         }
@@ -411,12 +437,12 @@ public final class RecentAppsActivity extends AppCompatActivity
      * sozinha, sem gesto nenhum atrás, é só enfeite.
      */
     private void animarEntrada(@NonNull Intent deOnde) {
-        int lado = deOnde.getIntExtra(EXTRA_LADO, LADO_NENHUM);
-        if (lado == LADO_NENHUM) {
+        ladoDeEntrada = deOnde.getIntExtra(EXTRA_LADO, LADO_NENHUM);
+        if (ladoDeEntrada == LADO_NENHUM) {
             return;
         }
         SlideAnimation.entrarDoLado(root,
-                lado == LADO_DA_ESQUERDA
+                ladoDeEntrada == LADO_DA_ESQUERDA
                         ? SlideAnimation.LADO_ESQUERDO : SlideAnimation.LADO_DIREITO);
     }
 
