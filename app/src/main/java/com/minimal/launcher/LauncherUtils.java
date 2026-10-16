@@ -2,6 +2,7 @@ package com.minimal.launcher;
 
 import android.content.Context;
 import android.content.Intent;
+import android.util.DisplayMetrics;
 
 import androidx.annotation.NonNull;
 
@@ -68,18 +69,35 @@ public final class LauncherUtils {
     }
 
     /**
+     * A borda mais longa da tela, em pixels.
+     *
+     * <p>É o que a tipografia mede, e não a altura que a tela tem no momento.
+     * Girar o aparelho não o encolhe, e o cálculo automático não tem como saber a
+     * diferença: medindo a altura, uma tela de 501dp de altura parece uma tela
+     * baixa e o texto crescia 41% ao deitar o aparelho. Medindo a borda longa, o
+     * número é o mesmo nos dois sentidos.
+     *
+     * <p>No vertical a borda longa é a própria altura, então o que a pessoa vê
+     * hoje não muda em nada — esta é a leitura que mantém o desenho atual.
+     */
+    private static int longestEdgePx(@NonNull Context context) {
+        DisplayMetrics metrics = context.getResources().getDisplayMetrics();
+        return Math.max(metrics.widthPixels, metrics.heightPixels);
+    }
+
+    /**
      * Fator tipográfico automático da tela.
      *
-     * <p>Razão entre a altura de referência e a altura real, limitada. Uma tela
-     * de 640dp recebe 1.25; uma de 1000dp recebe 0.92.
+     * <p>Razão entre a altura de referência e o tamanho real do aparelho, limitada.
+     * Uma tela de 640dp recebe 1.25; uma de 1000dp recebe 0.92.
      */
     public static float getFontFactor(@NonNull Context context) {
         float density = context.getResources().getDisplayMetrics().density;
-        float heightDp = usableHeightPx(context) / density;
-        if (heightDp <= 0f) {
+        float edgeDp = longestEdgePx(context) / density;
+        if (edgeDp <= 0f) {
             return 1f;
         }
-        float factor = REFERENCE_HEIGHT_DP / heightDp;
+        float factor = REFERENCE_HEIGHT_DP / edgeDp;
         return Math.max(FONT_FACTOR_MIN, Math.min(FONT_FACTOR_MAX, factor));
     }
 
