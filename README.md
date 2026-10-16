@@ -86,7 +86,25 @@ cada arquivo e compara com a paleta — um print de cor errada passaria batido.
 | Android SDK | platform **android-37** e build-tools compatível |
 | Gradle | 9.8 ou superior |
 
-O repositório **não tem o `gradlew`**. Use o Gradle da sua máquina:
+O **Android Studio** já vem com JDK, Gradle e SDK Manager, então se você o tem
+instalado ele é o caminho mais curto: abra a pasta do projeto e espere o sync.
+
+Pelo terminal, o passo que assombra é o Gradle. **O repositório não tem o
+`gradlew`** — a pasta `gradle/wrapper/` tem só o `gradle-wrapper.properties`, sem
+o `gradlew` nem o `gradle-wrapper.jar` que fariam o build se instalar sozinho.
+Ou seja: o Gradle 9.8+ precisa estar no `PATH` da sua máquina.
+
+| Sistema | Como ficar com o Gradle |
+|---|---|
+| Linux | `sdk install gradle 9.8.1` (SDKMAN) ou o pacote da sua distro |
+| macOS | `brew install gradle`, ou o `.zip` de [gradle.org](https://gradle.org/install/) |
+| Windows | o `.zip` de [gradle.org](https://gradle.org/install/), descompactado, com a pasta `bin` dentro no `PATH` |
+
+Confira com `gradle --version`.
+
+### Compilar
+
+No Linux e no macOS:
 
 ```bash
 cd ~/Projects/launcher
@@ -94,16 +112,55 @@ gradle assembleDebug
 # → app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Se o SDK não estiver no caminho padrão, crie/edite `local.properties` na raiz:
+No Windows, no Prompt de comando (o `~` não existe lá — use o caminho inteiro):
+
+```bat
+cd C:\Users\voce\Projetos\launcher
+gradle assembleDebug
+```
+
+### Onde o Android SDK está
+
+O Gradle procura o SDK em três lugares, nessa ordem: a propriedade `sdk.dir` do
+`local.properties`, a variável `ANDROID_HOME` e o caminho padrão da plataforma.
+Qualquer um dos dois primeiros resolve, e eles servem para qualquer sistema
+operacional.
+
+**Jeito 1 — variável de ambiente** (vale para os três, e é o que o Android Studio
+e qualquer CI usam):
+
+```bash
+export ANDROID_HOME=/caminho/do/seu/Android/Sdk   # Linux e macOS
+setx ANDROID_HOME "C:\Users\voce\AppData\Local\Android\Sdk"   # Windows, no PowerShell
+```
+
+**Jeito 2 — arquivo `local.properties`** na raiz do projeto. Ele é específico da
+sua máquina e está no `.gitignore` de propósito:
 
 ```properties
-sdk.dir=/caminho/do/seu/Android/Sdk
+# Linux
+sdk.dir=/home/voce/Android/Sdk
+
+# macOS
+sdk.dir=/Users/voce/Library/Android/sdk
+
+# Windows
+sdk.dir=C\:\\Users\\voce\\AppData\\Local\\Android\\Sdk
+```
+
+No Windows as barras precisam de escape porque o `:` do `C:` seria lido como
+separador de propriedade. A forma que quase nunca erra é usar barra normal:
+
+```properties
+sdk.dir=C:/Users/voce/AppData/Local/Android/Sdk
 ```
 
 ### Instalar
 
 ```bash
 adb install -r app/build/outputs/apk/debug/app-debug.apk
+Pelo terminal, com o aparelho em modo USB:
+
 ```
 
 ### Definir como launcher padrão
@@ -134,9 +191,11 @@ Como instalar:
    `.apk`) e instale.
 2. **Ative a depuração por USB** (ou depuração sem fio, em *Opções do
    desenvolvedor*).
-3.ligue o Shizuku por ADB. Sem wireless debugging, o caminho é o do APK
-   `start.sh` que vem na mesma página de releases; com ele, é `adb shell` rodando
-   o binário do próprio app instalado.
+3. Ligue o Shizuku por ADB. Sem *wireless debugging*, o caminho é o do
+   `start.sh` que vem na página de releases — e ele é um script de shell, então no
+   Windows precisa de WSL ou Git Bash. Com *wireless debugging*, é `adb shell`
+   rodando o binário do próprio app já instalado, e funciona igual nos três
+   sistemas.
 4. Abra o Shizuku, autorize o Nothing Launcher, e volte ao launcher.
 
 O passo 3 muda conforme a versão do Shizuku e o Android. Se ele falhar, a saída do
@@ -158,7 +217,8 @@ boot.
 | Arrastar para cima | Abre a busca |
 | Arrastar para o lado | Abre a tela de apps recentes |
 | Arrastar para baixo | Fecha a tela de busca e a de recentes |
-| Arrastar para o lado, na tela de recentes | Fecha a tela |
+| Arrastar para o lado, na tela de recentes | Fecha a tela, se o dedo começou fora dos apps |
+| Arrastar para o lado, em cima de um app | Tira aquele app da lista |
 
 O arrasto lateral vale **em qualquer lugar da tela e para os dois lados** — ele é
 ambidestro e não depende da mão configurada. Precisa percorrer 8% da largura da
