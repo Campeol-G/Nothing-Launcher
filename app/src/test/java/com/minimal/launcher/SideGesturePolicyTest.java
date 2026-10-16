@@ -79,4 +79,18 @@ public class SideGesturePolicyTest {
         float minimo = SideGesturePolicy.percursoMinimo(LARGURA, DENSIDADE);
         assertTrue(SideGesturePolicy.dispara(Math.abs(-200f), minimo));
     }
+
+    @Test public void oGestoDaTelaValeForaDasLinhas() {
+        // Vazio de cima, margens, rodape: nao ha app ali, entao o arrasto fecha a
+        // tela — como em todas as outras telas do app.
+        assertTrue(SideGesturePolicy.oGestoDaTelaVale(false));
+    }
+
+    @Test public void sobreUmaLinhaOArrastoNAoFechaATela() {
+        // Nasceu em cima de um app, o arrasto e do app: ele sai da lista. Se a tela
+        // tambem fechasse aqui, um unico gesto faria as duas coisas e o usuario
+        // perderia a linha sem saber que a perdeu. E o limiar de 8% da largura nem
+        // entra na conta — apagar e gesto curto.
+        assertFalse(SideGesturePolicy.oGestoDaTelaVale(true));
+    }
 }

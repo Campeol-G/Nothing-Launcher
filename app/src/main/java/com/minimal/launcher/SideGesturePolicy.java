@@ -86,6 +86,27 @@ public final class SideGesturePolicy {
         return Math.abs(dx);
     }
 
+    /**
+     * O arrasto lateral fecha a tela, ou é de uma linha que nasceu debaixo dele?
+     *
+     * <p>Na tela de apps recentes o mesmo arrasto significa duas coisas diferentes,
+     * e quem decide é apenas de onde o dedo partiu: em cima de um app ele tira o
+     * app da lista; fora dos apps ele fecha a tela.
+     *
+     * <p>A decisão mora aqui e não na View pelo mesmo motivo das outras — escrita
+     * dentro do {@code EdgeGestureLayout}, ela só apareceria como "o arrasto parou
+     * de funcionar em uma tela", sem nada que explicasse por quê.
+     *
+     * <p>Quando a linha fica com o gesto, o limiar de percurso nem entra na conta.
+     * Apagar é gesto curto e o meio da tela é inchado de linhas, então exigir 8% da
+     * largura ali seria gesto de comando, não de leitura.
+     *
+     * @param nasceuEmLinha o toque partiu de cima de uma linha da lista.
+     */
+    public static boolean oGestoDaTelaVale(boolean nasceuEmLinha) {
+        return !nasceuEmLinha;
+    }
+
     /** O texto do módulo serve só para deixar o vínculo explícito no leitor. */
     @NonNull
     @Override

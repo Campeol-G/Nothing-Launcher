@@ -62,6 +62,21 @@ public class EdgeGestureLayout extends FrameLayout {
         void onSideGesture(int direction);
     }
 
+    /**
+     * O app que fica com o arrasto lateral quando o toque nasce em cima dele.
+     *
+     * <p>A regra é de {@link SideGesturePolicy#oGestoDaTelaVale(boolean)}; aqui só
+     * entra o que é da View, que é transformar um ponto da tela em "tem app aqui".
+     */
+    public interface SideGestureBlocker {
+        /**
+         * @param rawX coordenada absoluta do toque, como vem no {@link MotionEvent}.
+         * @param rawY idem.
+         * @return true quando há um app sob o dedo, e o arrasto é dele.
+         */
+        boolean temAppEm(float rawX, float rawY);
+    }
+
     private int direction = DIRECTION_UP;
     @Nullable
     private View scrollChild;
@@ -79,9 +94,33 @@ public class EdgeGestureLayout extends FrameLayout {
      * corria só na direção da mão dominante; nascendo no meio, como a busca já faz,
      * ele fica no mesmo lugar para qualquer dedo. Ambidestro também tira a dependência
      * da mão configurada, que era mais uma coisa a lembrar.
+     *
+     * <p>E ele pode perder para quem está em cima dele: um {@link SideGestureBlocker}
+     * devolve o gesto quando o toque nasce sobre um app, e o arrasto passa a ser do
+     * app. A regra é do blocker, não daqui.
      */
     @Nullable
     private OnSideGestureListener sideListener;
+
+    /**
+     * Quem diz se um ponto da tela pertence a um app.
+     *
+     * <p>Sem isto, o arrasto horizontal nasce em qualquer lugar e não há como a
+     * tela de apps recentes recusá-lo só em cima das linhas — e é em cima das
+     * linhas que ele apaga o app, em vez de fechar a tela.
+     */
+    @Nullable
+    private SideGestureBlocker sideBlocker;
+
+    /**
+     * O toque nasceu em cima de uma linha? Então o arrasto é da linha.
+     *
+     * <p>Decidido no DOWN e guardado até o fim do gesto: o dono se decide de onde o
+     * dedo partiu, nunca de onde ele está agora. Reavaliar a cada MOVE deixaria o
+     * gesto trocar de dono no meio do arrasto, e a linha sumiria no instante em que
+     * o dedo saísse dela.
+     */
+    private boolean sideBlocked;
 
     // Estado do gesto horizontal em andamento.
     private boolean sideTracking;
@@ -165,6 +204,16 @@ public class EdgeGestureLayout extends FrameLayout {
     }
 
     /**
+     * Diz quem fica com o arrasto lateral quando o toque nasce em cima dele.
+     *
+     * <p>Só a tela de apps recentes liga isto. Nas outras, null: o arrasto vale em
+     * qualquer lugar, como sempre.
+     */
+    public void setSideGestureBlocker(@Nullable SideGestureBlocker blocker) {
+        this.sideBlocker = blocker;
+    }
+
+    /**
      * Altura da faixa inferior onde o gesto nao vale. Vem dos insets do sistema.
      *
      * @see #bottomGestureExclusionPx
@@ -193,6 +242,7 @@ public class EdgeGestureLayout extends FrameLayout {
 
     private void resetSide() {
         sideTracking = false;
+        sideBlocked = false;
         sideTravel = 0f;
         sideStartX = 0f;
         sideStartY = 0f;
@@ -342,9 +392,19 @@ public class EdgeGestureLayout extends FrameLayout {
                 sideTravel = 0f;
                 sideStartX = event.getRawX();
                 sideStartY = event.getRawY();
+                // Quem é o dono do arrasto se decide aqui, e vale até o dedo soltar.
+                boolean haLinhaEmCima = sideBlocker != null
+                        && sideBlocker.temAppEm(sideStartX, sideStartY);
+                sideBlocked = !SideGesturePolicy.oGestoDaTelaVale(haLinhaEmCima);
                 return false;
 
             case MotionEvent.ACTION_MOVE: {
+                if (sideBlocked) {
+                    // A linha ficou com o gesto. Devolver false é o que deixa o
+                    // arrasto chegar nela intacto — inclusive o seu ACTION_DOWN,
+                    // que já foi repassado por super.
+                    return false;
+                }
                 float dx = event.getRawX() - sideStartX;
                 if (sideTracking) {
                     // O percurso e o maior |dx| ja percorrido: e o que torna o
