@@ -188,6 +188,11 @@ public final class SearchActivity extends AppCompatActivity implements AppMenu.L
     @Override
     protected void onPause() {
         resumed = false;
+        // A tela de apps recentes pode ter sido aberta pelo arrasto horizontal, e a
+        // busca continua viva atrás dela. Sem fechar o teclado aqui, ele aparece por
+        // cima da tela nova — e é a pior coisa que pode acontecer num launcher, cujo
+        // fundo é sólido e sem nada por cima.
+        hideKeyboard();
         super.onPause();
     }
 
@@ -247,6 +252,20 @@ public final class SearchActivity extends AppCompatActivity implements AppMenu.L
         InputMethodManager imm = getSystemService(InputMethodManager.class);
         if (imm != null) {
             imm.showSoftInput(search, InputMethodManager.SHOW_IMPLICIT);
+        }
+    }
+
+    /**
+     * Fecha o teclado.
+     *
+     * <p>Separado de {@code showKeyboard} porque os dois lados precisam andar
+     * juntos: a tela abre com o teclado e, qualquer que seja o caminho de saída —
+     * arrasto lateral, arrasto para baixo, botão voltar — ela fecha sem ele.
+     */
+    private void hideKeyboard() {
+        InputMethodManager imm = getSystemService(InputMethodManager.class);
+        if (imm != null && search != null) {
+            imm.hideSoftInputFromWindow(search.getWindowToken(), 0);
         }
     }
 

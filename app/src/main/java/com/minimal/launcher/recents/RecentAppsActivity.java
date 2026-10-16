@@ -1,10 +1,13 @@
 package com.minimal.launcher.recents;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.TypedValue;
 import android.provider.Settings;
 import android.view.View;
+import android.view.animation.AccelerateInterpolator;
+import android.view.animation.DecelerateInterpolator;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -54,10 +57,40 @@ public final class RecentAppsActivity extends AppCompatActivity
     /** O app do Shizuku, para o aviso levar direto à tela dele. */
     private static final String SHIZUKU_PACKAGE = "moe.shizuku.privileged.api";
 
+    /**
+     * De que lado a tela entra, quando ela foi aberta por arrasto.
+     *
+     * <p>Guarda o lado pelo qual ela entra, e não a direção do dedo: o dedo vai
+     * para a direita e a tela vem da esquerda. Quem converte é quem constrói o
+     * intent.
+     */
+    private static final String EXTRA_LADO = "minimal.launcher/LADO";
+    private static final int LADO_NENHUM = 0;
+    private static final int LADO_DA_ESQUERDA = 1;
+    private static final int LADO_DA_DIREITA = 2;
+
+    /** Animação curta. Mais que isso e o gesto parece esperar. */
+    private static final long DURACAO_ENTRADA_MS = 200L;
+    private static final long DURACAO_SAIDA_MS = 170L;
+
+    /**
+     * O intent que abre a tela vinda de um arrasto.
+     *
+     * @param dragDirecao {@link EdgeGestureLayout#DIRECTION_RIGHT} para o dedo ter
+     *                    ido para a direita; a tela entra pela esquerda.
+     */
+    @NonNull
+    public static Intent intentEnteringFrom(@NonNull Context context, int dragDirecao) {
+        return new Intent(context, RecentAppsActivity.class)
+                .putExtra(EXTRA_LADO, dragDirecao == EdgeGestureLayout.DIRECTION_RIGHT
+                        ? LADO_DA_ESQUERDA : LADO_DA_DIREITA);
+    }
+
     private ShizukuTaskKiller killer;
     private Prefs prefs;
     private DismissedStore dismissedStore;
 
+    private EdgeGestureLayout root;
     private RecyclerView list;
     private TextView hint;
     private TextView clearAll;
@@ -85,7 +118,8 @@ public final class RecentAppsActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_recent_apps);
 
-        EdgeGestureLayout root = findViewById(R.id.root);
+        EdgeGestureLayout raiz = findViewById(R.id.root);
+        root = raiz;
         list = findViewById(R.id.recent_apps_list);
         hint = findViewById(R.id.recent_hint);
         clearAll = findViewById(R.id.recent_clear_all);
@@ -100,16 +134,16 @@ public final class RecentAppsActivity extends AppCompatActivity
         // Deslizar para baixo fecha, como na busca.
         root.setEdgeGesture(EdgeGestureLayout.DIRECTION_DOWN, null, this::finish);
 
-        // Aqui o gesto horizontal e reversivel: o mesmo arrasto que abriu a tela
-        // a fecha. Fora dela o gesto so abre, e fechar e pelo botao voltar.
-        // Inverter o sentido e a unica forma de o gesto ser o mesmo na entrada e
-        // na saida sem trocar o dedo de lado.
-        boolean appsOnRight = Prefs.ALIGN_RIGHT.equals(prefs.getDominantHand());
-        root.setSideGesture(
-                appsOnRight
-                        ? EdgeGestureLayout.DIRECTION_LEFT
-                        : EdgeGestureLayout.DIRECTION_RIGHT,
-                this::finish);
+        // Aqui o arrasto horizontal fecha, e para os dois lados. E o inverso exato
+        // do gesto que abriu a tela, entao quem chegou na tela por um gesto sai
+        // pela mesma dobradura.
+        root.setSideGesture(this::sairParaO);
+
+        // Se veio por arrasto, a tela entra deslizando pelo lado oposto ao dedo.
+        // Sem isso (aberta por atalho do sistema) nao ha animacao nenhuma.
+        if (savedInstanceState == null) {
+            animarEntrada(getIntent());
+        }
 
         list.setLayoutManager(new LinearLayoutManager(this));
         list.setAdapter(adapter = new RecentListAdapter(this, new ArrayList<>(), this));
@@ -245,6 +279,53 @@ public final class RecentAppsActivity extends AppCompatActivity
         shown.remove(entry);
         adapter.removeAt(position);
         killOffMainThread(() -> killer.kill(entry.packageName));
+    }
+
+    /**
+     * A tela entrando deslizando pelo lado oposto ao do dedo.
+     *
+     * <p>Arrastou para a direita, a tela vem da esquerda — o olho já sabe para que
+     * lado a coisa vai, e a animação só confirma. É o mesmo princípio do teclado: a
+     * coisa nova nasce perto de onde o dedo já estava.
+     *
+     * <p>Sem animação quando não há arrasto na origem. Uma tela que abre deslizando
+     * sozinha, sem gesto nenhum atrás, é só enfeite.
+     */
+    private void animarEntrada(@NonNull Intent deOnde) {
+        int lado = deOnde.getIntExtra(EXTRA_LADO, LADO_NENHUM);
+        if (lado == LADO_NENHUM) {
+            return;
+        }
+        root.setTranslationX(lado == LADO_DA_ESQUERDA ? -larguraDaTela() : larguraDaTela());
+        root.setAlpha(0f);
+        root.animate()
+                .translationX(0f)
+                .alpha(1f)
+                .setDuration(DURACAO_ENTRADA_MS)
+                .setInterpolator(new DecelerateInterpolator(1.6f))
+                .start();
+    }
+
+    /**
+     * A tela saindo na direção do dedo.
+     *
+     * <p>O gesto de fechar vai pelo mesmo caminho que o de abrir, ao contrário: o
+     * dedo vai para a direita e a tela vai com ele.
+     */
+    private void sairParaO(int direcao) {
+        root.animate()
+                .translationX(direcao == EdgeGestureLayout.DIRECTION_RIGHT
+                        ? larguraDaTela() : -larguraDaTela())
+                .alpha(0f)
+                .setDuration(DURACAO_SAIDA_MS)
+                .setInterpolator(new AccelerateInterpolator(1.6f))
+                .withEndAction(this::finish)
+                .start();
+    }
+
+    private float larguraDaTela() {
+        return root.getWidth() > 0 ? root.getWidth()
+                : getResources().getDisplayMetrics().widthPixels;
     }
 
     /** O pé da tela chama isto. Não vem do adapter: o botão saiu da lista. */

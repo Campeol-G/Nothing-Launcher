@@ -116,22 +116,20 @@ public final class LauncherUtils {
     }
 
     /**
-     * Liga o gesto horizontal que abre a tela de apps recentes.
+     * Liga o arrasto horizontal que abre a tela de apps recentes.
      *
-     * <p>Fica aqui porque as tres telas precisam do mesmo gesto e da mesma regra: ele
-     * corre na direcao para onde os nomes encostam, que e a mao dominante. Se as
-     * telas decidissem isso sozinhas, uma delas esqueceria e o gesto pararia de
+     * <p>Fica aqui porque as quatro telas precisam do mesmo gesto e da mesma regra.
+     * Se as telas decidissem isso sozinhas, uma delas esqueceria e o gesto pararia de
      * funcionar em uma delas sem ninguem perceber.
+     *
+     * <p>A mao dominante deixou de contar: o gesto e ambidestro e nasce em qualquer
+     * lugar da tela. A direcao do dedo e repassada para a activity, que e quem
+     * escolhe de que lado a tela entra.
      */
     public static void bindRecentAppsGesture(@NonNull EdgeGestureLayout root) {
-        boolean appsOnRight = Prefs.ALIGN_RIGHT
-                .equals(new Prefs(root.getContext()).getDominantHand());
-        root.setSideGesture(
-                appsOnRight
-                        ? EdgeGestureLayout.DIRECTION_RIGHT
-                        : EdgeGestureLayout.DIRECTION_LEFT,
-                () -> root.getContext().startActivity(
-                        new Intent(root.getContext(), RecentAppsActivity.class)
+        root.setSideGesture(dragDirection ->
+                root.getContext().startActivity(
+                        RecentAppsActivity.intentEnteringFrom(root.getContext(), dragDirection)
                                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
     }
 }

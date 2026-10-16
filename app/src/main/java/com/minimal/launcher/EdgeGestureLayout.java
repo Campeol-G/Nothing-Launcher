@@ -39,29 +39,27 @@ public class EdgeGestureLayout extends FrameLayout {
     public static final int DIRECTION_RIGHT = -2;
 
     /**
-     * Faixa lateral onde o gesto nasce.
-     *
-     * <p>48dp e o mesmo {@code SYSTEM_GESTURE_MARGIN_DP} que a app ja reserva para o
-     * gesto do sistema: larga o bastante para o dedo acertar com folga, estreita
-     * o bastante para nunca nascer em cima de um item da lista.
+     * A faixa lateral e o percurso minimo do gesto horizontal foram para a
+     * {@link SideGesturePolicy}, que os calcula e os testa. Aqui ja nao ha medida a
+     * tomar: a View so distribui os eventos.
      */
-    private static final int SIDE_BAND_DP = 48;
-
-    /**
-     * Percurso minimo do gesto horizontal, em dp. E o piso, nao a medida.
-     *
-     * <p>Quem manda e a porcentagem da largura (10%): ela da o mesmo gesto em
-     * qualquer aparelho. Este piso so protege a tela estreita, onde 10% dariam um
-     * arrasto curto demais para alguém acertar de proposito.
-     *
-     * <p>Era 18% da largura com piso de 56dp, e era longo demais: atravessar quase
-     * um quinto da tela com o dedo para abrir uma lista e um gesto de leitura, nao
-     * de comando. O que se pede aqui e um arrasto de polegar.
-     */
-    private static final int SIDE_MIN_TRAVEL_DP = 40;
 
     public interface OnEdgeGestureListener {
         void onEdgeGesture();
+    }
+
+    /**
+     * O arrasto horizontal, e para que lado o dedo foi.
+     *
+     * <p>A direção chega junto porque a animação precisa dela: arrastou para a
+     * direita, a tela entra pela esquerda.
+     */
+    public interface OnSideGestureListener {
+        /**
+         * @param direction {@link #DIRECTION_RIGHT} quando o dedo foi para a
+         *                  direita, {@link #DIRECTION_LEFT} para a esquerda.
+         */
+        void onSideGesture(int direction);
     }
 
     private int direction = DIRECTION_UP;
@@ -71,32 +69,27 @@ public class EdgeGestureLayout extends FrameLayout {
     private OnEdgeGestureListener edgeListener;
 
     /**
-     * O segundo braço: horizontal, independente do vertical.
+     * O arrasto horizontal: em qualquer lugar da tela e para os dois lados.
      *
-     * <p>São dois braços porque não competem entre si. O vertical exige
-     * {@code |dy| > |dx|} e o horizontal exige o contrário, então quem decide é o
-     * próprio arrasto. Com um braço só, o gesto de fechar a tela acabaria engolindo
-     * o de abrir a lista de recentes, ou o contrário — e o horizontal ainda teria
-     * de disputar com a rolagem da lista.
+     * <p>Um braço só o vertical não daria. O vertical exige {@code |dy| > |dx|} e o
+     * horizontal o contrário, então quem decide é o próprio arrasto, e não a ordem em
+     * que as telas registram os gestos.
+     *
+     * <p>E é ambidestro por escolha. Antes ele nascia numa faixa de 48dp na borda e
+     * corria só na direção da mão dominante; nascendo no meio, como a busca já faz,
+     * ele fica no mesmo lugar para qualquer dedo. Ambidestro também tira a dependência
+     * da mão configurada, que era mais uma coisa a lembrar.
      */
-    private int sideDirection;
     @Nullable
-    private OnEdgeGestureListener sideListener;
-
-    /**
-     * Faixa lateral onde o gesto nasce. Fora dela o arrasto e da lista.
-     *
-     * <p>48dp e o mesmo {@code SYSTEM_GESTURE_MARGIN_DP} que a app ja reserva para
-     * o gesto do sistema: uma faixa larga o bastante para o dedo acertar com folga,
-     * estreita o bastante para nunca nascer em cima de um item da lista.
-     */
-    private int sideStartBandPx;
+    private OnSideGestureListener sideListener;
 
     // Estado do gesto horizontal em andamento.
     private boolean sideTracking;
     private float sideTravel;
     private float sideStartX;
     private float sideStartY;
+    /** Para que lado o dedo foi. É o que manda na animação de entrada e de saída. */
+    private int sideDragDirection = DIRECTION_RIGHT;
     @Nullable
     private Runnable doubleTapListener;
 
@@ -139,7 +132,6 @@ public class EdgeGestureLayout extends FrameLayout {
     public EdgeGestureLayout(@NonNull Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
         touchSlop = android.view.ViewConfiguration.get(context).getScaledTouchSlop();
-        sideStartBandPx = ThemeHelper.dp(context, SIDE_BAND_DP);
         reset();
     }
 
@@ -158,15 +150,14 @@ public class EdgeGestureLayout extends FrameLayout {
     }
 
     /**
-     * Liga (ou desliga) o gesto horizontal.
+     * Liga (ou desliga) o arrasto horizontal.
      *
-     * @param direction {@link #DIRECTION_RIGHT} quando os apps encostam na direita
-     *                  (e o gesto corre da esquerda para a direita), ou
-     *                  {@link #DIRECTION_LEFT} no caso oposto.
+     * <p>Não recebe direção porque não é preciso para decidir: o gesto vale nos dois
+     * sentidos. A direção do dedo chega no listener, para a animação.
+     *
      * @param listener o que fazer quando o gesto e aceito; null desliga.
      */
-    public void setSideGesture(int direction, @Nullable OnEdgeGestureListener listener) {
-        this.sideDirection = direction;
+    public void setSideGesture(@Nullable OnSideGestureListener listener) {
         this.sideListener = listener;
         if (listener == null) {
             resetSide();
@@ -333,18 +324,14 @@ public class EdgeGestureLayout extends FrameLayout {
     /**
      * O braço horizontal. Devolve true quando este evento pertence a ele.
      *
-     * <p>Três decisões que explicam o comportamento:
+     * <p>As decisões vivem em {@link SideGesturePolicy}, que é pura e testada. Aqui
+     * só entra o que é da View: ler o evento e devolver se ele foi consumido.
      *
-     * <ul>
-     *   <li><b>Só nasce na faixa lateral.</b> Nascendo no meio da tela, o gesto
-     *   disputaria a rolagem da lista com o dedo do polegar. Nascer na borda é o
-     *   que torna a disputa impossível: a lista nunca começa ali.
-     *   <li><b>Trava de eixo de 1.2, como a do vertical.</b> É o que impede um
-     *   arrasto diagonal de acionar o gesto errado.
-     *   <li><b>Só percorre, não arremessa.</b> Medir distância e não velocidade:
-     *   soltar o dedo com força dispara o gesto sem querer, e o gesto errado é
-     *   pior do que o gesto atrasado.
-     * </ul>
+     * <p>O que mudou de verdade: o gesto nasce em qualquer lugar da tela e vale
+     * nos dois sentidos. Perto da borda isso disputa com o gesto de voltar do
+     * sistema, e foi por isso que ele nascia na faixa de 48dp; no meio da tela não
+     * há disputa, porque nenhuma rolagem é horizontal. A trava de eixo continua
+     * sendo a rede de proteção da rolagem vertical.
      */
     private boolean observeSide(MotionEvent event) {
         float width = getWidth() > 0 ? getWidth()
@@ -358,40 +345,34 @@ public class EdgeGestureLayout extends FrameLayout {
                 return false;
 
             case MotionEvent.ACTION_MOVE: {
+                float dx = event.getRawX() - sideStartX;
                 if (sideTracking) {
-                    float dx = event.getRawX() - sideStartX;
-                    float signed = sideDirection == DIRECTION_RIGHT ? dx : -dx;
-                    if (signed > sideTravel) {
-                        sideTravel = signed;
+                    // O percurso e o maior |dx| ja percorrido: e o que torna o
+                    // gesto ambidestro, porque arrastar para tras tambem conta.
+                    float andado = SideGesturePolicy.percorreu(dx);
+                    if (andado > sideTravel) {
+                        sideTravel = andado;
                     }
                     return true;
                 }
-                float dx = event.getRawX() - sideStartX;
                 float dy = event.getRawY() - sideStartY;
-                // Fora da faixa lateral: o arrasto e da lista, nosso nao.
-                if (!startedInSideBand(sideStartX, width)) {
+                if (!SideGesturePolicy.assume(dx, dy, touchSlop)) {
                     return false;
                 }
-                // Trava de eixo: arrasto claramente vertical pertence ao outro
-                // braço, e nao a este.
-                if (Math.abs(dx) < Math.abs(dy) * 1.2f) {
-                    return false;
-                }
-                float signed = sideDirection == DIRECTION_RIGHT ? dx : -dx;
-                if (signed > touchSlop) {
-                    sideTracking = true;
-                    sideTravel = Math.max(signed, 0f);
-                    return true;
-                }
-                return false;
+                sideTracking = true;
+                sideDragDirection = dx >= 0f ? DIRECTION_RIGHT : DIRECTION_LEFT;
+                sideTravel = SideGesturePolicy.percorreu(dx);
+                return true;
             }
 
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL: {
-                boolean fire = sideTracking && sideTravel >= computeSideMinTravel(width);
+                boolean fire = sideTracking
+                        && SideGesturePolicy.dispara(sideTravel, sideMinTravel(width));
+                int arrastouPara = sideDragDirection;
                 resetSide();
                 if (fire) {
-                    sideListener.onEdgeGesture();
+                    sideListener.onSideGesture(arrastouPara);
                 }
                 return false;
             }
@@ -406,21 +387,10 @@ public class EdgeGestureLayout extends FrameLayout {
         }
     }
 
-    /**
-     * Percurso minimo do gesto horizontal.
-     *
-     * <p>Medido na largura, e nao na altura: o gesto corre de lado, e um percentual
-     * da altura nao diria nada sobre o quanto falta andar. O piso existe para a tela
-     * estreita; num aparelho normal quem manda e a porcentagem.
-     */
-    private float computeSideMinTravel(float width) {
-        return Math.max(
-                ThemeHelper.dp(getContext(), SIDE_MIN_TRAVEL_DP),
-                width * 0.10f);
-    }
-
-    private boolean startedInSideBand(float rawX, float width) {
-        return rawX <= sideStartBandPx || rawX >= width - sideStartBandPx;
+    /** Percurso minimo do gesto horizontal, em px. Quem decide e a politica. */
+    private float sideMinTravel(float width) {
+        return SideGesturePolicy.percursoMinimo(
+                width, getResources().getDisplayMetrics().density);
     }
 
     private boolean isInsideScrollChild(float rawX, float rawY) {

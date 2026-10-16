@@ -155,32 +155,56 @@ boot.
 | Toque longo no nome | Favoritar, informações do app, desinstalar |
 | Toque longo na área vazia | Abre a busca |
 | Toque longo no relógio ou na data | Abre as configurações |
-| Arrastar para cima, de baixo para cima | Abre a busca |
-| Arrastar para o lado, da borda para dentro | Abre a tela de apps recentes |
+| Arrastar para cima | Abre a busca |
+| Arrastar para o lado | Abre a tela de apps recentes |
 | Arrastar para baixo | Fecha a tela de busca e a de recentes |
-| Arrastar para o lado inverso, na tela de recentes | Fecha a tela |
+| Arrastar para o lado, na tela de recentes | Fecha a tela |
 
-O arrasto para o lado corre **na direção da sua mão dominante** (padrão: da
-esquerda para a direita) e só vale quando **começa na faixa da borda**, uns 48dp.
-No meio da tela ele não existe — ali é rolagem da lista. Percorre 10% da largura da
-tela, o que dá um arrasto curto de polegar.
+O arrasto lateral vale **em qualquer lugar da tela e para os dois lados** — ele é
+ambidestro e não depende da mão configurada. Precisa percorrer 8% da largura da
+tela, o que dá um arrasto curto de polegar. Na tela de apps recentes o mesmo
+arrasto a fecha, indo na direção do dedo.
+
+A tela de apps recentes entra deslizando pelo lado **oposto** ao do dedo e sai
+indo **com** ele, em 200ms — o suficiente para o olho acompanhar sem virar espera.
+
+Ele não dispara em arrasto vertical, que é de quem rola a lista ou puxa a busca
+para cima. A trava de eixo existe para isso.
 
 ---
 
 ## O que ele pede ao sistema
 
-Duas permissões, ambas no manifesto e nenhuma com diálogo:
+Três permissões, todas no manifesto e nenhuma com diálogo:
 
 | Permissão | Para quê |
 |---|---|
 | `QUERY_ALL_PACKAGES` | Ler a lista de apps instalados, para a busca e os favoritos |
 | `moe.shizuku.manager.permission.API_V23` | Poder pedir autorização ao Shizuku |
+| `SET_WALLPAPER` | Pintar o wallpaper do aparelho, se a pessoa ligar o item das configurações |
 
 Não pede acesso a notificações, não usa serviço de acessibilidade, não usa
 serviço em segundo plano e não faz rede. Nada disso existe no app.
 
 O launcher apenas esconde as barras do sistema e deixa você puxá-las quando
 quiser; as notificações continuam funcionando como sempre.
+
+### O wallpaper na cor do app
+
+Em *Configurações → Fundo do sistema na cor do app*. Ligado, o app pinta o
+wallpaper do aparelho com a cor atual da tela, e ele acompanha as trocas de cor.
+Desligado, ele para de mexer.
+
+Isso não é vaidade: resolve os vãos que **não são do app**. O bloqueio, a janela
+de recents do sistema e a transição entre apps são telas do sistema, e nenhum app
+de terceiro pode tomá-las — o bloqueio exige permissão restrita e o recents mora
+dentro do SystemUI. São exatamente os lugares onde a imagem do aparelho aparecia
+atravessando o launcher. Trocar o wallpaper é a única alavanca que o app tem
+sobre eles: não conserta o desenho, conserta o que aparece quando o desenho não
+chega.
+
+O item vem desligado. O Android pode pedir confirmação ao trocar o wallpaper — **no
+aparelho testado o launcher é dispensado do diálogo** e a troca é imediata.
 
 ---
 
