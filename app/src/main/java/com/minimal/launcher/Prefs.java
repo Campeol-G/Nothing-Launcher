@@ -34,6 +34,8 @@ public final class Prefs {
     private static final String KEY_FONT_COMBO = "font_combo";
     private static final String KEY_CLOCK_FORMAT = "clock_format";
     private static final String KEY_DATE_FORMAT = "date_format";
+    private static final String KEY_WALLPAPER_SOLIDARIO = "wallpaper_solidario";
+    private static final String KEY_WALLPAPER_APLICADA = "wallpaper_aplicada";
 
     /** Escalas de fonte oferecidas nas configurações, do menor ao maior. */
     public static final float[] FONT_SCALES = {0.85f, 1.0f, 1.2f, 1.45f};
@@ -52,6 +54,37 @@ public final class Prefs {
 
     public void setDominantHand(String value) {
         prefs.edit().putString(KEY_ALIGNMENT, value).apply();
+    }
+
+    // ------------------------------------------------------ wallpaper
+
+    /** O wallpaper do aparelho deve acompanhar a cor do app? */
+    public boolean isWallpaperSolidario() {
+        return prefs.getBoolean(KEY_WALLPAPER_SOLIDARIO, false);
+    }
+
+    /**
+     * Grava com {@code commit}, e não com {@code apply}.
+     *
+     * <p>São duas chaves, escritas uma vez por ação do usuário, e a segunda
+     * ({@code wallpaper_aplicada}) é gravada logo antes de o Android repintar o
+     * wallpaper — trabalho pesado que pode derrubar o processo. Com {@code apply} a
+     * escrita fica pendente na fila de disco e se perde junto: o app volta sem saber
+     * que já pintou, e repinta de novo a cada tela que volta à frente.
+     *
+     * <p>Um {@code commit} síncrono, uma vez a cada mudança de cor, é preço justo.
+     */
+    public void setWallpaperSolidario(boolean value) {
+        prefs.edit().putBoolean(KEY_WALLPAPER_SOLIDARIO, value).commit();
+    }
+
+    /** A cor que este app deixou no wallpaper por último. Zero = nunca pintou. */
+    public int getWallpaperAplicada() {
+        return prefs.getInt(KEY_WALLPAPER_APLICADA, 0);
+    }
+
+    public void setWallpaperAplicada(int color) {
+        prefs.edit().putInt(KEY_WALLPAPER_APLICADA, color).commit();
     }
 
     // -------------------------------------------------- posição vertical

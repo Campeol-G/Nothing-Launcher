@@ -17,6 +17,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.minimal.launcher.WallpaperHelper;
 import com.minimal.launcher.apps.AppEntry;
 import com.minimal.launcher.apps.AppListAdapter;
 import com.minimal.launcher.apps.AppListCallback;
@@ -163,6 +164,11 @@ public final class HomeActivity extends AppCompatActivity
             recreate();
             return;
         }
+
+        // O wallpaper do aparelho, se a pessoa mandou seguir a cor. Aqui, e não na
+        // inicialização do processo: o item pode ter sido ligado a qualquer momento,
+        // e a cor pode ter mudado desde a última vez que a tela ficou à frente.
+        WallpaperHelper.aplicarSePrecisar(this);
 
         ThemeHelper.applySystemBars(this);
         updateClock();

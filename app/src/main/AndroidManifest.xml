@@ -16,6 +16,14 @@
     -->
     <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
 
+    <!--
+      Para pintar o wallpaper do aparelho na cor do app. É permissão normal, sem
+      diálogo, e o app só age quando a pessoa liga o item das configurações.
+      Serve para os vãos que não são nossos: o bloqueio, o recents do sistema e a
+      transição entre apps, onde aparecia a imagem do aparelho.
+    -->
+    <uses-permission android:name="android.permission.SET_WALLPAPER" />
+
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />

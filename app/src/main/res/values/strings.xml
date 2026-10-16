@@ -83,6 +83,9 @@
     <string name="action_cancel">Cancelar</string>
 
     <!-- Tela de apps recentes -->
+    <string name="settings_wallpaper_title">Fundo do sistema na cor do app</string>
+    <string name="settings_wallpaper_summary">Pinta o wallpaper do aparelho na cor da tela, para a imagem do sistema não aparecer entre uma tela e outra</string>
+
     <string name="recent_list_description">Lista de apps recentes</string>
     <string name="recent_dismiss">×</string>
     <string name="recent_dismiss_description">Tirar da lista</string>

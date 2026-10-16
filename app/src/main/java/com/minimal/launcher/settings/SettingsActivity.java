@@ -15,10 +15,13 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.minimal.launcher.ColorCombo;
+import com.minimal.launcher.EdgeGestureLayout;
 import com.minimal.launcher.FontCombo;
+import com.minimal.launcher.LauncherUtils;
 import com.minimal.launcher.Prefs;
 import com.minimal.launcher.R;
 import com.minimal.launcher.ThemeHelper;
+import com.minimal.launcher.WallpaperHelper;
 
 /**
  * Configuracoes dentro do proprio launcher, no mesmo estilo: so texto, sem
@@ -46,6 +49,11 @@ public final class SettingsActivity extends AppCompatActivity {
     ThemeHelper.applyInsets(this, root, 26, 30, 18);
     ThemeHelper.applySystemBars(this);
     ThemeHelper.paint(this, root, false);
+
+    // O arrasto horizontal vale aqui tambem, e pela mesma regra das outras telas:
+    // qualquer lado, em qualquer lugar. Quem sabe o gesto e quem o aplica na tela
+    // de destino, entao nao ha direcao a decidir aqui.
+    LauncherUtils.bindRecentAppsGesture((EdgeGestureLayout) root);
 
     TextView title = findViewById(R.id.settings_title);
     title.setTypeface(FontCombo.getTitleFont(this));
@@ -138,6 +146,59 @@ public final class SettingsActivity extends AppCompatActivity {
                 recreate();
               });
         }));
+
+    rows.addView(toggle(getString(R.string.settings_wallpaper_title),
+        getString(R.string.settings_wallpaper_summary),
+        prefs.isWallpaperSolidario(),
+        ligado -> {
+          prefs.setWallpaperSolidario(ligado);
+          // Liga ou desliga não espera: repinta na hora. É a única resposta que faz
+          // sentido para quem está olhando — o item existe para ver o efeito.
+          WallpaperHelper.aplicarSePrecisar(this);
+          recreate();
+        }));
+  }
+
+  /**
+   * Linha de liga e desliga.
+   *
+   * <p>Um interruptor de verdade, e não mais uma linha que abre um diálogo de duas
+   * opções: a pergunta aqui é de estado, não de escolha, e o dedo vai direto nela.
+   */
+  private View toggle(String title, String summary, boolean ligado,
+      @NonNull java.util.function.Consumer<Boolean> onChange) {
+    LinearLayout row = new LinearLayout(this);
+    row.setOrientation(LinearLayout.HORIZONTAL);
+    row.setGravity(Gravity.CENTER_VERTICAL);
+    row.setBackground(ripple());
+    row.setClickable(true);
+    row.setFocusable(true);
+
+    LinearLayout textos = new LinearLayout(this);
+    textos.setOrientation(LinearLayout.VERTICAL);
+    textos.addView(label(title, R.dimen.settings_row_size, false));
+    textos.addView(label(summary, R.dimen.settings_summary_size, true));
+    row.addView(textos, new LinearLayout.LayoutParams(0,
+        ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+    android.widget.Switch interruptor = new android.widget.Switch(this);
+    interruptor.setChecked(ligado);
+    interruptor.setTextColor(ThemeHelper.getHomeForegroundColor(this));
+    // O interruptor é só a figura: o alvo é a linha inteira.
+    //
+    // Sem isso o Switch se comporta como alvo próprio — ele mesmo liga e desliga ao
+    // ser tocado e consome o toque, e a linha nunca fica sabendo. O sintoma é
+    // exatamente o pior possível para quem mexe nisso: o interruptor vira, parece
+    // que funcionou, e a preferência não é gravada.
+    interruptor.setClickable(false);
+    interruptor.setFocusable(false);
+    row.setOnClickListener(v -> {
+      interruptor.setChecked(!interruptor.isChecked());
+      onChange.accept(interruptor.isChecked());
+    });
+    row.addView(interruptor);
+
+    return row;
   }
 
   // ---------------------------------------------------------- construcao
